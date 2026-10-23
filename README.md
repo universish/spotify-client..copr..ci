@@ -40,7 +40,7 @@ sudo dnf copr enable zicstardust/spotify-client-testing
 sudo dnf install spotify-client
 ```
 
-### GitHub Release
+### GitHub Releases
 [GitHub Release](https://github.com/zicstardust/spotify-rpm-packager/releases)
 
 ## License
