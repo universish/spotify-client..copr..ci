@@ -8,6 +8,12 @@ on:
       - nginx/**
       - Dockerfile
       - entrypoint.sh
+  schedule:
+    - cron: '0 0 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 env:
   BUILDX_NO_DEFAULT_ATTESTATIONS: 1
