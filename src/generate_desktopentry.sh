@@ -8,7 +8,7 @@ cat > ${destine_dir}/spotify.desktop <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Spotify
-Version=${version}
+Version=1.0
 GenericName=Music Player
 Comment=Spotify streaming music client
 Icon=spotify-client

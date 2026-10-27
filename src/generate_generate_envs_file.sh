@@ -1,22 +1,20 @@
-#!/usr/bin/bash
-
-destine_dir=$1
-
-cat > ${destine_dir}/generate_envs_file.sh <<"FILE"
-#!/usr/bin/bash
-
-mkdir -p ${HOME}/.config/spotify
-
-cat > ${HOME}/.config/spotify/spotify.env <<"ENVS"
-#If delete this file, it will be recreated with the default environment variables the next time you run Spotify.
-
-#Defaults environment variables to improve Fedora/RHEL compatibility
-# Disable hardware acceleration that causes black screen
-SPOTIFY_CLEAN_CACHE=1
-
-#Environment variables exemples:
+#!/usr/bin/env bash
+set -euo pipefail
+output=${1:?Output directory required}
+mkdir -p "$output"
+cat > "$output/generate_envs_file.sh" <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spotify"
+mkdir -p "$config_dir"
+umask 077
+# noclobber preserves a configuration another launcher may have just created.
+if [[ ! -e "$config_dir/spotify.env" ]]; then
+    (set -o noclobber; cat > "$config_dir/spotify.env" <<'CONFIG'
+# One KEY=value assignment per line; shell code is never evaluated.
 #WAYLAND_DISPLAY=
-ENVS
-
-FILE
-chmod +x ${destine_dir}/generate_envs_file.sh
+CONFIG
+    ) || [[ -f "$config_dir/spotify.env" ]]
+fi
+SCRIPT
+chmod 0755 "$output/generate_envs_file.sh"

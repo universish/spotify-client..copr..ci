@@ -1,37 +1,23 @@
-#!/usr/bin/bash
-
-destine_dir=$1
-
-cat > ${destine_dir}/generate_flags_file.sh <<"FILE"
-#!/usr/bin/bash
-
-mkdir -p ${HOME}/.config/spotify
-
-cat > ${HOME}/.config/spotify/spotify-flags.conf <<"FLAGS"
-#If delete this file, it will be recreated with the default flags the next time you run Spotify.
-
-#Defaults Flags to improve Fedora/RHEL compatibility
---disable-gpu-sandbox
---disable-seccomp-filter-sandbox
---no-zygote
-
-#Flags exemples:
-#Disable Wayland and run XWayland
+#!/usr/bin/env bash
+set -euo pipefail
+output=${1:?Output directory required}
+mkdir -p "$output"
+cat > "$output/generate_flags_file.sh" <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spotify"
+mkdir -p "$config_dir"
+umask 077
+# noclobber preserves a configuration another launcher may have just created.
+if [[ ! -e "$config_dir/spotify-flags.conf" ]]; then
+    (set -o noclobber; cat > "$config_dir/spotify-flags.conf" <<'CONFIG'
+# One argument per line. Lines beginning with # are comments.
 #--ozone-platform=x11
-#--disable-features=UseOzonePlatform
-
 #--disable-gpu
-#--disable-gpu-shader-disk-cache
-#--force-device-scale-factor=<value>
-#--cache-path=<path>
-#--debug-level=OFF|MAX|<value range 0-8>
-#--uri=<spotify_uri>
-#--mu=<value>
-#--log-file=<path>
-#--show-console
-#--username=<username>
-#--password=<password>
-FLAGS
-
-FILE
-chmod +x ${destine_dir}/generate_flags_file.sh
+#--force-device-scale-factor=1.5
+# Terminal diagnostics: spotify --debug
+CONFIG
+    ) || [[ -f "$config_dir/spotify-flags.conf" ]]
+fi
+SCRIPT
+chmod 0755 "$output/generate_flags_file.sh"

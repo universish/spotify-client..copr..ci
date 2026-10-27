@@ -1,0 +1,19 @@
+name: Validate packaging
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check scripts and regression tests
+        run: |
+          for script in src/*.sh tools/*.sh; do bash -n "$script"; done
+          python3 -m unittest discover -s tests -v

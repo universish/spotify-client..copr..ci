@@ -3,3 +3,7 @@ data/
 logs/
 gpg-key/
 .env
+output/
+*.rpm
+*.deb
+*.pyc

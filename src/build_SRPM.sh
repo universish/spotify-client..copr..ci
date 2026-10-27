@@ -1,91 +1,71 @@
 #!/usr/bin/env bash
-
-SPOTIFY_BRANCH=$1
-SPOTIFY_VERSION=$2
-logfile="$(getdate "log").build.SRPM.${SPOTIFY_VERSION}"
-
-#https://github.com/zicstardust/spotify-debfixes/releases
-if [ "$SPOTIFY_BRANCH" == "stable" ]; then
-    ffmpeg_spotify_release="7.1.5"
-elif [ "$SPOTIFY_BRANCH" == "testing" ]; then
-    ffmpeg_spotify_release="7.1.5"
+set -euo pipefail
+branch=${1:?Branch required}
+version=${2:?Version required}
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+export PATH="$script_dir:$PATH"
+: "${BUILD_DIR:?BUILD_DIR is required}"
+: "${SOURCES_DIR:=$BUILD_DIR/SOURCES}"
+: "${BUILTIN_FFMPEG:=false}"
+if [[ ! "$version" =~ ^[A-Za-z0-9.+~]+$ || ! "$branch" =~ ^stable$ ]]; then
+    echo 'Invalid version or branch' >&2
+    exit 2
 fi
+source_file="${SPOTIFY_DOWNLOAD_DIR:-/tmp}/spotify-client_${version}_amd64.deb"
+work=$(mktemp -d "${TMPDIR:-/tmp}/spotify-build.XXXXXXXX")
+trap 'rm -rf -- "$work"' EXIT
+mkdir -p "$BUILD_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+cd "$work"
+root="spotify-client-$version"
+# Refresh signatures first, then extract and scan before changing the payload.
+scan_payload.sh --update
+# Extract control scripts for scanning too; never execute Debian maintainer scripts.
+dpkg-deb --raw-extract "$source_file" "$root"
+[[ $(dpkg-deb --field "$source_file" Architecture) == amd64 ]]
+[[ $(dpkg-deb --field "$source_file" Package) == spotify-client ]]
+deb_version=$(dpkg-deb --field "$source_file" Version)
+[[ ${deb_version#*:} == "$version" ]]
+minimum_glibc=$(dpkg-deb --field "$source_file" Depends | python3 -c \
+    'import re,sys; m=re.search(r"libc6\s*\(>=\s*([0-9.]+)\)", sys.stdin.read()); sys.exit("Missing upstream libc6 requirement") if m is None else print(m[1])')
 
-current_dir=$(pwd)
-cd /tmp
-source_file="/tmp/spotify-client_${SPOTIFY_VERSION}_amd64.${SOURCE}"
-mkdir -v spotify-client-${SPOTIFY_VERSION} 2>&1 | logs $logfile
-echo "$(getdate) - Extracting .${SOURCE}..." 2>&1 | logs $logfile "all"
-
-
-if [ "$SOURCE" = "deb" ]; then
-    # Extract .deb
-    ar x ${source_file} 2>&1 | logs $logfile
-    tar -xvf data.tar.gz 2>&1 | logs $logfile
-    mv -v usr spotify-client-${SPOTIFY_VERSION} 2>&1 | logs $logfile
-else
-    unsquashfs ${source_file} 2>&1 | logs $logfile
-    mv -v /tmp/squashfs-root/usr spotify-client-${SPOTIFY_VERSION} 2>&1 | logs $logfile
-fi
-
-
-#Delete apt-keys folder
-echo "$(getdate) - Remove from .${SOURCE}: apt-keys" 2>&1 | logs $logfile "all"
-rm -Rfv spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/apt-keys 2>&1 | logs $logfile
-
-#Include FFMPEG libraries
 if [[ "$BUILTIN_FFMPEG" =~ ^(1|true|True|y|Y)$ ]]; then
-    echo "$(getdate) - Add to SRPM: FFMPEG ${ffmpeg_spotify_release} libraries" 2>&1 | logs $logfile "all"
-    mkdir -pv spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/ffmpeg 2>&1 | logs $logfile
-    curl -fSL "https://github.com/zicstardust/spotify-ffmpeg-libs/releases/download/v${ffmpeg_spotify_release}/spotify-ffmpeg-${ffmpeg_spotify_release}-libs-linux-x86_64.tar.gz" -o "/tmp/ffmpeg_libs.tar.gz" 2>&1 | logs $logfile
-    tar -xzvf /tmp/ffmpeg_libs.tar.gz  -C spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/ffmpeg 2>&1 | logs $logfile
-else
-    echo "$(getdate) - Skip FFMPEG libraries." 2>&1 | logs $logfile "all"
+    ffmpeg_version=7.1.5
+    curl --fail --location --retry 3 \
+        "https://github.com/zicstardust/spotify-ffmpeg-libs/releases/download/v${ffmpeg_version}/spotify-ffmpeg-${ffmpeg_version}-libs-linux-x86_64.tar.gz" \
+        --output "$work/ffmpeg.tar.gz"
+    mkdir -p "$root/usr/share/spotify/ffmpeg"
+    tar -xzf "$work/ffmpeg.tar.gz" -C "$root/usr/share/spotify/ffmpeg"
 fi
 
-# Generate Desktop Entry
-echo "$(getdate) - Add to SRPM: Desktop Entry" 2>&1 | logs $logfile "all"
-generate_desktopentry.sh spotify-client-${SPOTIFY_VERSION}/usr/share/applications ${SPOTIFY_VERSION}
-echo "$(getdate) - Remove from .${SOURCE}: Desktop Entry" 2>&1 | logs $logfile "all"
-rm -fv spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/spotify.desktop 2>&1 | logs $logfile
-
-#Copy icons
-echo "$(getdate) - Add to SRPM: Icons" 2>&1 | logs $logfile "all"
-copy_icons.sh ${SPOTIFY_VERSION} 2>&1 | logs $logfile
-echo "$(getdate) - Remove from .${SOURCE}: Icons" 2>&1 | logs $logfile "all"
-rm -Rfv spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/icons 2>&1 | logs $logfile
-
-# Generate man page
-echo "$(getdate) - Add to SRPM: Man" 2>&1 | logs $logfile "all"
-generate_man.sh spotify-client-${SPOTIFY_VERSION}/usr/share/man/man1
-
-# Generate appdata
-echo "$(getdate) - Add to SRPM: Appdata" 2>&1 | logs $logfile "all"
-generate_appdata.sh spotify-client-${SPOTIFY_VERSION}/usr/share/appdata ${SPOTIFY_VERSION}
-
-
-# Genarate bin
-echo "$(getdate) - Remove from .${SOURCE}: Bin" 2>&1 | logs $logfile "all"
-rm -fv spotify-client-${SPOTIFY_VERSION}/usr/bin/spotify 2>&1 | logs $logfile
-echo "$(getdate) - Add to SRPM: Bin" 2>&1 | logs $logfile "all"
-generate_bin.sh spotify-client-${SPOTIFY_VERSION}/usr/bin $BUILTIN_FFMPEG
-generate_generate_flags_file.sh spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/
-generate_generate_envs_file.sh spotify-client-${SPOTIFY_VERSION}/usr/share/spotify/
-
-
-#Create and move spotify-client.tar.gz to SOURCES
-echo "$(getdate) - Create tar file to spotify-client:${SPOTIFY_VERSION}..." 2>&1 | logs $logfile "all"
-tar -czvf spotify-client-${SPOTIFY_VERSION}.tar.gz spotify-client-${SPOTIFY_VERSION} 2>&1 | logs $logfile
-echo "$(getdate) - Move tar file Sources directory..." 2>&1 | logs $logfile "all"
-cp -v spotify-client-${SPOTIFY_VERSION}.tar.gz ${SOURCES_DIR}/ 2>&1 | logs $logfile
-
-# Generate spec file
-echo "$(getdate) - Create spec file..." 2>&1 | logs $logfile "all"
-generate_spec.sh ${BUILD_DIR}/SPECS/spotify.spec $SPOTIFY_VERSION
-
-
-echo "$(getdate) - Building SRPMS spotify-client:${SPOTIFY_VERSION}..." 2>&1 | logs $logfile "all"
-rpmbuild -bs --define "_topdir ${BUILD_DIR}" ${BUILD_DIR}/SPECS/spotify.spec 2>&1 | logs $logfile
-
-cd $current_dir
-
+# No RPM/SRPM is produced unless signatures update and the extracted tree scans clean.
+scan_payload.sh --scan "$root"
+rm -rf -- "$root/DEBIAN" "$root/usr/share/spotify/apt-keys"
+[[ -x "$root/usr/share/spotify/spotify" ]]
+generate_desktopentry.sh "$root/usr/share/applications" "$version"
+rm -f -- "$root/usr/share/spotify/spotify.desktop"
+# Keep the fork's icon names to preserve desktop integration.
+for size in 8 16 22 24 32 36 44 48 64 72 96 128 144 150 192 256 310 512 1024; do
+    icon="$root/usr/share/spotify/icons/spotify-linux-$size.png"
+    if [[ -f "$icon" ]]; then
+        install -Dm0644 "$icon" "$root/usr/share/icons/hicolor/${size}x${size}/apps/spotify-client.png"
+    fi
+done
+svg="$script_dir/spotify-client.svg"
+[[ -f "$svg" ]] || svg=/home/spotify/spotify-client.svg
+install -Dm0644 "$svg" "$root/usr/share/icons/hicolor/scalable/apps/spotify-client.svg"
+rm -rf -- "$root/usr/share/spotify/icons"
+generate_man.sh "$root/usr/share/man/man1"
+generate_appdata.sh "$root/usr/share/appdata" "$version"
+# Debian's launcher is a symlink; remove it before writing the wrapper.
+rm -f -- "$root/usr/bin/spotify"
+generate_bin.sh "$root/usr/bin" "$BUILTIN_FFMPEG"
+generate_generate_flags_file.sh "$root/usr/share/spotify"
+generate_generate_envs_file.sh "$root/usr/share/spotify"
+# Only the /usr payload belongs in the resulting RPM.
+mkdir package
+mv "$root/usr" package/
+rm -rf -- "$root"
+mv package "$root"
+tar -czf "$SOURCES_DIR/spotify-client-$version.tar.gz" "$root"
+generate_spec.sh "$BUILD_DIR/SPECS/spotify.spec" "$version" "$minimum_glibc"
+rpmbuild -bs --define "_topdir $BUILD_DIR" --define 'dist %{nil}' --define '_source_payload w3.gzdio' "$BUILD_DIR/SPECS/spotify.spec"

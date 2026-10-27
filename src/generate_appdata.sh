@@ -39,7 +39,7 @@ cat > ${destine_dir}/spotify.appdata.xml <<APPDATA
     </screenshot>
   </screenshots>
   <releases>
-  <release version="${SPOTIFY_VERSION}" date="$(date +"%Y-%M-%d")">
+  <release version="${SPOTIFY_VERSION}" date="$(date +"%Y-%m-%d")">
       <description></description>
     </release>
   </release>
