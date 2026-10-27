@@ -100,7 +100,7 @@ python3 -m unittest discover -s tests -v
 
 Testler başlatıcının argüman/çıkış kodu davranışını, özel günlük izinlerini,
 metaveri ayrıştırmasını ve ClamAV hata durumlarında paket üretiminin durmasını
-kontrol eder. İlk istenen dağıtım listesinin gerekçeli durumu
+kontrol eder. Güncellenen dağıtım/mimari listesinin gerekçeli durumu
 [targets.json](packaging/targets.json) içinde saklanır; etkin kapsam yalnızca
 kararlı x86_64'tür; COPR'da ek olarak listelenen x86_64_v2 hedefleri
 aynı resmî amd64 ikilisini paketleyebilir. 32 bit hedefler için güncel istemci
