@@ -1,23 +1,15 @@
-name: Build and publish stable Spotify x86_64 RPMs
+name: Stable Spotify RPMs and COPR
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - src/**
-      - .github/workflows/spotify-rpm-releases.yml
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 12,17 * * *'
+      timezone: Europe/Stockholm
   workflow_dispatch:
-    inputs:
-      force_release:
-        description: Rebuild and replace this stable version's assets
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
+# One counter reservation/build/delivery at a time, including manual invocations.
 concurrency:
   group: spotify-stable-release
   cancel-in-progress: false
@@ -25,35 +17,23 @@ concurrency:
 jobs:
   detect:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
       tag: ${{ steps.version.outputs.tag }}
       needed: ${{ steps.version.outputs.needed }}
     steps:
       - uses: actions/checkout@v7
-      - name: Detect stable version and retain exact source metadata
+      - name: Check stable DEB version and reserve packaging number
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORCE_RELEASE: ${{ inputs.force_release || false }}
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
           SPOTIFY_METADATA_DIR: ${{ runner.temp }}/spotify-metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 src/parser_debian_control_file.py stable spotify-client Version
-          version=$(cat "$SPOTIFY_METADATA_DIR/spotify-client.stable.Version")
-          tag="v${version}-3"
-          needed=true
-          if [[ "$FORCE_RELEASE" != true ]]; then
-            if release=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets 2>/dev/null); then
-              if jq -e '(.isDraft == false) and (.isPrerelease == false) and any(.assets[]; .name | endswith(".x86_64.rpm")) and any(.assets[]; .name | endswith(".src.rpm"))' <<< "$release" >/dev/null; then
-                needed=false
-              fi
-            fi
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+        run: python3 tools/plan_release.py --event "$GITHUB_EVENT_NAME"
       - uses: actions/upload-artifact@v7
         if: steps.version.outputs.needed == 'true'
         with:
@@ -64,6 +44,10 @@ jobs:
     needs: detect
     if: needs.detect.outputs.needed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SPOTIFY_RELEASE: ${{ needs.detect.outputs.release }}
+      SPOTIFY_VERSION: ${{ needs.detect.outputs.version }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -73,17 +57,17 @@ jobs:
       - name: Install packaging and scanning tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 binutils
+          sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 binutils desktop-file-utils
       - name: Run regression tests
         run: python3 -m unittest discover -s tests -v
-      - name: Verify DEB, refresh ClamAV, extract, scan and build SRPM
+      - name: Verify DEB, refresh signatures, extract and scan all payloads
         env:
           SPOTIFY_METADATA_FILE: ${{ github.workspace }}/metadata/spotify-client.stable.json
         run: src/build_once.sh stable output
-      - name: Build and check x86_64 RPM
+      - name: Build and check versioned x86_64 RPM
         run: |
           src/build_binary.sh output/spotify-*.src.rpm output
-          test "$(rpm -qp --qf '%{NAME} %{ARCH}' output/spotify-*.x86_64.rpm)" = 'spotify x86_64'
+          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/spotify-*.x86_64.rpm)" = "spotify $SPOTIFY_VERSION-$SPOTIFY_RELEASE x86_64"
           cd output
           sha256sum spotify-*.rpm > SHA256SUMS
       - name: Save RPMs
@@ -104,9 +88,43 @@ jobs:
             output/scan-reports/
             output/rpm-build.log
 
-  publish:
+  copr:
     needs: [detect, build]
+    if: needs.detect.outputs.needed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SPOTIFY_VERSION: ${{ needs.detect.outputs.version }}
+      SPOTIFY_RELEASE: ${{ needs.detect.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: spotify-stable-rpms
+          path: assets
+      - name: Install COPR client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm python3-venv
+          python3 -m venv "$RUNNER_TEMP/copr-venv"
+          "$RUNNER_TEMP/copr-venv/bin/pip" install copr-cli
+          echo "$RUNNER_TEMP/copr-venv/bin" >> "$GITHUB_PATH"
+      - name: Submit to enabled compatible COPR distributions and wait
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: bash tools/submit_copr.sh assets/spotify-*.src.rpm output
+      - name: Save COPR submission evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: spotify-copr-validation
+          path: output/
+
+  publish:
+    needs: [detect, build, copr]
+    if: needs.detect.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -115,32 +133,36 @@ jobs:
         with:
           name: spotify-stable-rpms
           path: assets
-      - name: Publish complete stable release
+      - name: Publish a separate stable release for this packaging number
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.detect.outputs.tag }}
           VERSION: ${{ needs.detect.outputs.version }}
+          PACKAGING_RELEASE: ${{ needs.detect.outputs.release }}
         shell: bash
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
           Official stable Spotify DEB repackaged as `spotify` for x86_64 Linux.
-          The source's SHA256 is verified, ClamAV signatures are refreshed, and
-          the extracted payload must scan clean before packaging.
+          The original DEB and extracted payload are scanned with freshly updated
+          ClamAV signatures, heuristic and potentially unwanted application detection.
+          A detection, encrypted/unreadable content, scan error or scan limit stops packaging.
+          COPR submission to the currently enabled compatible targets completed successfully.
 
-          Install the binary RPM with `sudo dnf install ./spotify-*.x86_64.rpm`.
-          Start with `spotify`; enable terminal diagnostics with `spotify --debug`.
+          Install with `sudo dnf install ./spotify-*.x86_64.rpm` and start with `spotify`.
+          Use `spotify --debug` for terminal diagnostics.
           Runtime requirements follow the official DEB and the RPM's listed libraries.
-          RPMs are unsigned; SHA256SUMS provides download integrity checks.
-          Scan and build logs are available in this workflow's validation artifact.
+          GitHub RPMs are unsigned; SHA256SUMS supplies integrity checks.
+          Scan, build and COPR logs are available in the workflow artifacts.
           NOTES
+          # The tag was atomically reserved before scanning; never move/reuse it.
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --draft --title "Spotify $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --draft --title "Spotify $VERSION-$PACKAGING_RELEASE" --notes-file "$RUNNER_TEMP/release-notes.md"
           fi
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" assets/* --clobber
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest \
-            --title "Spotify $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+            --title "Spotify $VERSION-$PACKAGING_RELEASE" --notes-file "$RUNNER_TEMP/release-notes.md"
       - name: Generate download graph
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

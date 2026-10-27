@@ -94,7 +94,7 @@ class LauncherTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("dpkg-deb"), "dpkg-deb is required")
 class ScanGateTests(unittest.TestCase):
-    def build_with_scanner(self, update_status, scan_status):
+    def build_with_scanner(self, update_status, scan_status, inspect=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             package = root / "deb"
@@ -114,16 +114,19 @@ class ScanGateTests(unittest.TestCase):
             stubs.mkdir()
             for command, status in (("freshclam", update_status), ("clamscan", scan_status), ("rpmbuild", 0)):
                 script = stubs / command
-                script.write_text(f'#!/bin/bash\necho {command} >> "$EVENTS"\nexit {status}\n')
+                capture = 'printf "%s\\0" "$@" > "$SCAN_ARGS"\n' if command == "clamscan" else ""
+                script.write_text(f'#!/bin/bash\necho {command} >> "$EVENTS"\n{capture}exit {status}\n')
                 script.chmod(0o755)
             env = dict(os.environ, PATH=f"{stubs}:{os.environ['PATH']}",
-                       EVENTS=str(root / "events"), BUILD_DIR=str(root / "rpmbuild"),
+                       EVENTS=str(root / "events"), SCAN_ARGS=str(root / "scan-args"), BUILD_DIR=str(root / "rpmbuild"),
                        SOURCES_DIR=str(root / "rpmbuild/SOURCES"), SPOTIFY_DOWNLOAD_DIR=str(root),
                        CLAMAV_DATABASE_DIR=str(root / "db"), SCAN_REPORT_DIR=str(root / "reports"),
                        BUILTIN_FFMPEG="false")
             result = subprocess.run([str(SRC / "build_SRPM.sh"), "stable", "1.2.3"],
                                     env=env, capture_output=True, text=True)
             events = (root / "events").read_text().splitlines()
+            if inspect:
+                return result, events, (root / "scan-args").read_bytes().split(b"\0")[:-1]
             return result, events
 
     def test_update_failure_stops_before_scan_or_rpm(self):
@@ -145,6 +148,16 @@ class ScanGateTests(unittest.TestCase):
         result, events = self.build_with_scanner(0, 0)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(events, ["freshclam", "clamscan", "rpmbuild"])
+
+    def test_scanner_covers_deb_and_extracted_tree_with_heuristics(self):
+        result, events, args = self.build_with_scanner(0, 0, inspect=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events, ["freshclam", "clamscan", "rpmbuild"])
+        self.assertEqual(args[-2], b"spotify-client-1.2.3")
+        self.assertTrue(args[-1].endswith(b"spotify-client_1.2.3_amd64.deb"))
+        for flag in (b"--scan-archive=yes", b"--scan-elf=yes", b"--heuristic-alerts=yes",
+                     b"--detect-pua=yes", b"--alert-encrypted=yes", b"--alert-exceeds-max=yes"):
+            self.assertIn(flag, args)
 
 
 class ReportTests(unittest.TestCase):

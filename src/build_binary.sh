@@ -9,7 +9,7 @@ output=$(realpath "$output")
 work=$(mktemp -d "${TMPDIR:-/tmp}/spotify-rpm.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 mkdir -p "$work/tmp"
-for command in bash tar gzip; do command -v "$command" >/dev/null; done
+for command in bash tar gzip desktop-file-validate; do command -v "$command" >/dev/null; done
 build_options=()
 # Debian's package manager does not register its tools in the RPM database.
 # This skips build-dependency lookup only; automatic runtime ELF requirements stay enabled.

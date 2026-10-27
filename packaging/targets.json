@@ -1,5 +1,5 @@
 {
-  "checked_on": "2026-10-27",
+  "checked_on": "2026-10-28",
   "project": "universish/Spotify..Client",
   "channel": "stable",
   "release_architecture": "x86_64",
@@ -60,12 +60,6 @@
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation. This uses the upstream x86_64 binary, not a source rebuild optimized for v2."
     },
     {
-      "chroot": "centos-stream+epel-next-8-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
       "chroot": "centos-stream+epel-next-9-x86_64",
       "architecture": "x86_64",
       "status": "incompatible",
@@ -78,22 +72,10 @@
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "centos-stream-8-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
       "chroot": "centos-stream-9-x86_64",
       "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "custom-1-x86_64",
-      "architecture": "x86_64",
-      "status": "unconfigured",
-      "reason": "Custom chroot repositories and runtime ABI must be supplied first."
     },
     {
       "chroot": "epel-10-x86_64",
@@ -102,46 +84,16 @@
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "epel-7-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "epel-8-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
       "chroot": "epel-9-x86_64",
       "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
-      "chroot": "fedora-43-x86_64",
-      "architecture": "x86_64",
-      "status": "candidate",
-      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
-    },
-    {
-      "chroot": "fedora-44-i386",
-      "architecture": "i386",
-      "status": "unavailable",
-      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
-    },
-    {
       "chroot": "fedora-44-x86_64",
       "architecture": "x86_64",
       "status": "candidate",
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
-    },
-    {
-      "chroot": "fedora-45-i386",
-      "architecture": "i386",
-      "status": "unavailable",
-      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "fedora-45-x86_64",
@@ -156,22 +108,10 @@
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "fedora-rawhide-i386",
-      "architecture": "i386",
-      "status": "unavailable",
-      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
-    },
-    {
       "chroot": "fedora-rawhide-x86_64",
       "architecture": "x86_64",
       "status": "candidate",
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
-    },
-    {
-      "chroot": "mageia-10-i686",
-      "architecture": "i686",
-      "status": "unavailable",
-      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "mageia-10-x86_64",
@@ -180,31 +120,7 @@
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "mageia-8-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
       "chroot": "mageia-9-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "mageia-cauldron-x86_64",
-      "architecture": "x86_64",
-      "status": "candidate",
-      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
-    },
-    {
-      "chroot": "openeuler-20.03-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "openeuler-22.03-x86_64",
       "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
@@ -238,18 +154,6 @@
       "architecture": "x86_64",
       "status": "candidate",
       "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
-    },
-    {
-      "chroot": "rhel-7-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "rhel-8-x86_64",
-      "architecture": "x86_64",
-      "status": "incompatible",
-      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "rhel-9-x86_64",

@@ -15,13 +15,17 @@ if [[ -d "$data_dir/ffmpeg" ]]; then
 fi
 
 debug=${SPOTIFY_DEBUG:-0}
+gpu_mode=${SPOTIFY_GPU_MODE:-auto}
+gpu_cli=0
 log_file=
 while (($#)); do
     case "$1" in
         --debug) debug=1; shift ;;
         --debug-log=*) debug=1; log_file=${1#*=}; shift ;;
+        --safe-mode) gpu_mode=software; gpu_cli=1; shift ;;
+        --gpu-mode=*) gpu_mode=${1#*=}; gpu_cli=1; shift ;;
         --help)
-            printf '%s\n' 'Usage: spotify [--debug] [--debug-log=FILE] [Spotify options/URI]' \
+            printf '%s\n' 'Usage: spotify [--debug] [--debug-log=FILE] [--safe-mode] [--gpu-mode=auto|native|mesa|nvidia|nvidia-desktop|software] [Spotify options/URI]' \
                 'SPOTIFY_DEBUG=1 enables terminal diagnostics.' \
                 'Configuration: ${XDG_CONFIG_HOME:-$HOME/.config}/spotify/'
             exit 0 ;;
@@ -46,6 +50,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         exit 2
     fi
     envs+=("$line")
+    if [[ "$line" == SPOTIFY_GPU_MODE=* && "$gpu_cli" == 0 && -z ${SPOTIFY_GPU_MODE+x} ]]; then gpu_mode=${line#*=}; fi
 done < "$config_dir/spotify.env"
 
 if [[ "$debug" == 1 || "$debug" == true ]]; then
@@ -62,6 +67,10 @@ fi
 if [[ ! -x "$data_dir/spotify" ]]; then
     printf 'spotify: executable not found: %s/spotify\n' "$data_dir" >&2
     exit 127
+fi
+if [[ -r "$data_dir/spotify-gpu.sh" ]]; then
+    exec /bin/bash "$data_dir/spotify-gpu.sh" "$data_dir/spotify" "$gpu_mode" "$debug" \
+        "${#envs[@]}" "${envs[@]}" "${#flags[@]}" "${flags[@]}" "$@"
 fi
 exec env "${envs[@]}" "$data_dir/spotify" "${flags[@]}" "$@"
 LAUNCHER

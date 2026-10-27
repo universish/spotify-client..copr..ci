@@ -9,7 +9,8 @@ if [[ "${SOURCE:-deb}" != deb ]]; then
     echo 'This fork packages the official Debian source only; SOURCE must be deb.' >&2
     exit 2
 fi
-python3 - "$metadata_dir/spotify-client.$branch.json" "$version" "$download_dir" <<'DOWNLOAD'
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+python3 - "$metadata_dir/spotify-client.$branch.json" "$version" "$download_dir" "$script_dir" <<'DOWNLOAD'
 import hashlib
 import json
 import os
@@ -17,7 +18,9 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from urllib import request
+from urllib import error, request
+sys.path.insert(0, sys.argv[4])
+from parser_debian_control_file import REPOSITORIES
 
 record = json.loads(Path(sys.argv[1]).read_text())
 version, directory = sys.argv[2], Path(sys.argv[3])
@@ -29,20 +32,34 @@ if not re.fullmatch(r"pool/non-free/s/spotify-client/[A-Za-z0-9_.+~-]+[.]deb", f
 if not re.fullmatch(r"[0-9a-f]{64}", digest):
     raise SystemExit("Missing or invalid upstream SHA256")
 destination = directory / f"spotify-client_{version}_amd64.deb"
-fd, temporary = tempfile.mkstemp(prefix=".spotify-download-", dir=directory)
-try:
-    checksum, size = hashlib.sha256(), 0
-    with os.fdopen(fd, "wb") as output:
-        with request.urlopen("https://repository.spotify.com/" + filename, timeout=120) as response:
-            while chunk := response.read(1024 * 1024):
-                output.write(chunk)
-                checksum.update(chunk)
-                size += len(chunk)
-    if checksum.hexdigest() != digest or size != int(record["Size"]):
-        raise SystemExit("DEB checksum/size mismatch; stopping before extraction")
-    os.replace(temporary, destination)
-    print(f"Verified {destination} (SHA256 {digest})")
-finally:
-    if os.path.exists(temporary):
-        os.unlink(temporary)
+for base in REPOSITORIES:
+    fd, temporary = tempfile.mkstemp(prefix=".spotify-download-", dir=directory)
+    try:
+        checksum, size = hashlib.sha256(), 0
+        with os.fdopen(fd, "wb") as output:
+            try:
+                response = request.urlopen(base + "/" + filename, timeout=120)
+            except error.HTTPError as exc:
+                print(f"DEB source unavailable (HTTP {exc.code}): {base}", file=sys.stderr)
+                exc.close()
+                continue
+            except (error.URLError, TimeoutError):
+                print(f"DEB source unavailable: {base}", file=sys.stderr)
+                continue
+            with response:
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+                    checksum.update(chunk)
+                    size += len(chunk)
+        # A downloaded but altered file is rejected, not silently replaced by a mirror.
+        if checksum.hexdigest() != digest or size != int(record["Size"]):
+            raise SystemExit("DEB checksum/size mismatch; stopping before extraction")
+        os.replace(temporary, destination)
+        print(f"Verified {destination} from {base} (SHA256 {digest})")
+        break
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+else:
+    raise SystemExit("Neither official Spotify DEB download source is usable")
 DOWNLOAD

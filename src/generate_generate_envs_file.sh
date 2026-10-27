@@ -13,6 +13,7 @@ if [[ ! -e "$config_dir/spotify.env" ]]; then
     (set -o noclobber; cat > "$config_dir/spotify.env" <<'CONFIG'
 # One KEY=value assignment per line; shell code is never evaluated.
 #WAYLAND_DISPLAY=
+#SPOTIFY_GPU_MODE=auto
 CONFIG
     ) || [[ -f "$config_dir/spotify.env" ]]
 fi

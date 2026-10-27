@@ -38,7 +38,7 @@ if [[ "$BUILTIN_FFMPEG" =~ ^(1|true|True|y|Y)$ ]]; then
 fi
 
 # No RPM/SRPM is produced unless signatures update and the extracted tree scans clean.
-scan_payload.sh --scan "$root"
+scan_payload.sh --scan "$root" "$source_file"
 rm -rf -- "$root/DEBIAN" "$root/usr/share/spotify/apt-keys"
 [[ -x "$root/usr/share/spotify/spotify" ]]
 generate_desktopentry.sh "$root/usr/share/applications" "$version"
@@ -61,6 +61,7 @@ rm -f -- "$root/usr/bin/spotify"
 generate_bin.sh "$root/usr/bin" "$BUILTIN_FFMPEG"
 generate_generate_flags_file.sh "$root/usr/share/spotify"
 generate_generate_envs_file.sh "$root/usr/share/spotify"
+install -m0755 "$script_dir/spotify-gpu.sh" "$root/usr/share/spotify/spotify-gpu.sh"
 # Only the /usr payload belongs in the resulting RPM.
 mkdir package
 mv "$root/usr" package/

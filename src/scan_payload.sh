@@ -4,9 +4,9 @@ set -euo pipefail
 
 mode=both
 case ${1:-} in
-    --update) mode=update; payload= ;;
-    --scan) mode=scan; payload=${2:?Payload directory required} ;;
-    *) payload=${1:?Usage: scan_payload.sh [--update | --scan DIRECTORY | DIRECTORY]} ;;
+    --update) mode=update; targets=() ;;
+    --scan) mode=scan; shift; targets=("$@"); [[ ${#targets[@]} -gt 0 ]] ;;
+    *) targets=("${1:?Usage: scan_payload.sh [--update | --scan PATH... | PATH]}") ;;
 esac
 database=${CLAMAV_DATABASE_DIR:-${TMPDIR:-/tmp}/spotify-clamav-${UID}}
 report_dir=${SCAN_REPORT_DIR:-${TMPDIR:-/tmp}/spotify-scan-reports-${UID}}
@@ -29,10 +29,12 @@ if [[ "$mode" != scan ]]; then
     freshclam --config-file="$config" 2>&1 | tee "$report_dir/freshclam.log"
 fi
 [[ "$mode" != update ]] || exit 0
-echo 'Scanning the extracted Spotify payload...'
+echo 'Scanning DEB, extracted files, embedded archives and ELF executables for malware and potentially unwanted applications...'
 # Spotify's main ELF exceeds ClamAV's default file size limit.
 # Treat exhausted limits as detections instead of silently accepting skipped data.
 clamscan --database="$database" --recursive --infected \
+    --scan-elf=yes --scan-archive=yes --heuristic-alerts=yes --detect-pua=yes \
+    --alert-encrypted=yes --alert-broken=yes \
     --max-filesize=2000M --max-scansize=2000M --alert-exceeds-max=yes \
     --follow-dir-symlinks=0 --follow-file-symlinks=0 \
-    --log="$report_dir/clamscan.log" "$payload"
+    --log="$report_dir/clamscan.log" "${targets[@]}"

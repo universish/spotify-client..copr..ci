@@ -22,6 +22,12 @@ Enable Spotify and Chromium diagnostics in the terminal.
 .TP
 \fB\-\-debug-log=FILE\fR
 Enable diagnostics and append terminal output to a private log file.
+.TP
+\fB\-\-safe-mode\fR
+Use software rendering and clear NVIDIA PRIME selections.
+.TP
+\fB\-\-gpu-mode=MODE\fR
+Select auto, native, mesa, nvidia, nvidia-desktop or software rendering policy.
 .SH ENVIRONMENT
 SPOTIFY_DEBUG=1 enables diagnostics. XDG_CONFIG_HOME selects the configuration directory.
 .SH SEE ALSO
