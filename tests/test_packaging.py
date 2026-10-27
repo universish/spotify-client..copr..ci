@@ -157,10 +157,12 @@ class ReportTests(unittest.TestCase):
         self.assertNotIn("999", page)
         self.assertIn("&lt;version&gt;", page)
 
-    def test_requested_arm_targets_are_never_native_build_candidates(self):
+    def test_only_current_64_bit_targets_are_build_candidates(self):
         targets = json.loads((REPO / "packaging/targets.json").read_text())["targets"]
         self.assertTrue(any(t["status"] == "candidate" for t in targets))
-        self.assertTrue(all(t["status"] == "unsupported" for t in targets if t["chroot"].endswith("-aarch64")))
+        self.assertTrue(all(t["architecture"] in ("x86_64", "x86_64_v2") for t in targets if t["status"] == "candidate"))
+        self.assertTrue(all(t["status"] == "unavailable" for t in targets if t["architecture"] in ("i386", "i686")))
+        self.assertFalse(any(t["chroot"].endswith("-aarch64") for t in targets))
 
 
 if __name__ == "__main__":

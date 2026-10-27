@@ -53,25 +53,52 @@ ClamAV CDN restrictions/rate limits are build failures, never a reason to skip
 the signature update. CLAMAV_DATABASE_DIR can select a persistent local signature
 directory to avoid unnecessary full downloads.
 
-## Requested distributions and architectures
+## GitHub secret and running the workflow
 
-Current scope is stable x86_64 only. The historical requested list is in `packaging/targets.json`, including targets
-which cannot work with the upstream binary. Run `python3 tools/targets.py`.
+1. Log in at https://copr.fedorainfracloud.org/api/ and copy the complete generated configuration.
+2. Open https://github.com/universish/spotify-client..copr..ci/settings/secrets/actions
+3. Choose New repository secret, name it `COPR_CONFIG`, and paste the complete configuration as its value.
+4. Open Actions → Build scanned SRPM for COPR → Run workflow. Enable `submit_to_copr` to submit.
 
-* `candidate`: x86_64 target with a plausible current runtime. A clean
+The value has this shape (use your real generated values, not these placeholders):
+
+```ini
+[copr-cli]
+login = YOUR_GENERATED_LOGIN
+username = universish
+token = YOUR_GENERATED_TOKEN
+copr_url = https://copr.fedorainfracloud.org
+```
+
+The API page states tokens expire after 180 days. Replace the repository secret
+when you renew the token. Do not put the token in workflow YAML or tracked files.
+For local copr-cli use, save that same configuration in `~/.config/copr` with
+permissions 0600. The workflow uses a temporary private file and removes it on exit.
+No additional API key is needed for public project/chroot inspection.
+
+## Current requested distributions and architectures
+
+The updated user-requested list is in `packaging/targets.json`; all aarch64 entries
+have been removed. GitHub Releases still produces only stable x86_64 RPMs. COPR
+also permits the requested x86_64_v2 targets. Run `python3 tools/targets.py`.
+
+* `candidate`: x86_64 or x86_64_v2 target with a plausible current runtime. A clean
   mock build, dependency transaction and graphical login/playback test are still
-  needed before claiming support.
-* `unsupported`: aarch64; Spotify does not publish an arm64 Linux DEB. Renaming
-  an amd64 RPM or using a multi-architecture container cannot change its ISA.
+  needed before claiming support. Fedora 43 is included alongside 44/45/ELN/rawhide.
+* `unavailable`: i386/i686. The official stable i386 index still contains legacy
+  1.0.72.117.g6bd7cc73-35, while amd64 is 1.2.95.453.g0eeebbed. The current stable
+  pipeline cannot produce a corresponding 32-bit binary and does not relabel the
+  64-bit executable or silently substitute that old release.
 * `incompatible`: the release's glibc ABI predates the current DEB's requirement
-  of 2.39, including EL8/EL9, Mageia 9 and openEuler 24.03. No glibc replacement,
-  dependency bypass or obsolete Spotify release is bundled to conceal this.
-* `excluded`: x86_64_v2; the current scope produces x86_64 RPMs only.
+  of 2.39: EL7/EL8/EL9, Mageia 8/9 and openEuler 20.03/22.03/24.03. Package
+  dependencies are not bypassed and no replacement system glibc is bundled.
 * `unconfigured`: custom-1 needs an actual repository/buildroot definition.
 
-EL10's x86_64_v2 chroots can run an x86_64 payload but do not turn it into an
-optimized v2 build. Availability of EOL targets (especially CentOS Stream 8) and
-vendor subscription repositories must be checked separately.
+The x86_64_v2 package uses the upstream amd64 binary; it is not a source rebuild
+optimized for v2. Availability of EOL targets (especially CentOS Stream 8) and
+vendor subscription repositories must be checked separately. Public COPR metadata
+is used to intersect candidates with currently enabled project chroots at submission.
 
-Upstream metadata: https://repository.spotify.com/dists/stable/Release and
+Upstream metadata:
 https://repository.spotify.com/dists/stable/non-free/binary-amd64/Packages
+https://repository.spotify.com/dists/stable/non-free/binary-i386/Packages

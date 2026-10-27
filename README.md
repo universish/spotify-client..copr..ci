@@ -102,7 +102,9 @@ Testler başlatıcının argüman/çıkış kodu davranışını, özel günlük
 metaveri ayrıştırmasını ve ClamAV hata durumlarında paket üretiminin durmasını
 kontrol eder. İlk istenen dağıtım listesinin gerekçeli durumu
 [targets.json](packaging/targets.json) içinde saklanır; etkin kapsam yalnızca
-kararlı x86_64'tür. İsteğe bağlı temiz hedef denemesi için
+kararlı x86_64'tür; COPR'da ek olarak listelenen x86_64_v2 hedefleri
+aynı resmî amd64 ikilisini paketleyebilir. 32 bit hedefler için güncel istemci
+yayımlanmadığından eski i386 paketi güncel sürüm olarak kullanılmaz. İsteğe bağlı temiz hedef denemesi için
 `bash tools/build_target.sh SRPM CHROOT ÇIKTI_KLASÖRÜ` kullanılabilir.
 
 ## Lisans

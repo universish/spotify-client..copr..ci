@@ -27,11 +27,11 @@ cat > "${SPEC_FILE}" <<SPEC
 
 Name:           spotify
 Version:        ${SPOTIFY_VERSION}
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Spotify desktop client
 License:        Proprietary
 URL:            https://www.spotify.com/
-ExclusiveArch:  x86_64
+ExclusiveArch:  x86_64 x86_64_v2
 Source0:        spotify-client-%{version}.tar.gz
 Provides:       spotify-client = %{version}-%{release}
 Obsoletes:      spotify-client < %{version}-%{release}
@@ -86,6 +86,6 @@ chmod +x %{buildroot}/usr/bin/spotify
 %{_mandir}/man1/spotify.1*
 
 %changelog
-* $(date +"%a %b %d %Y") Automated Build <${GPG_EMAIL:-builder@localhost}> - ${SPOTIFY_VERSION}-2
+* $(date +"%a %b %d %Y") Automated Build <${GPG_EMAIL:-builder@localhost}> - ${SPOTIFY_VERSION}-3
 - Automated build of Spotify client ${SPOTIFY_VERSION}
 SPEC

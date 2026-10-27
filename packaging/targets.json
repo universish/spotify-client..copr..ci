@@ -1,294 +1,261 @@
 {
   "checked_on": "2026-10-27",
   "project": "universish/Spotify..Client",
+  "channel": "stable",
+  "release_architecture": "x86_64",
+  "copr_architectures": [
+    "x86_64",
+    "x86_64_v2"
+  ],
   "minimum_glibc": "2.39",
+  "upstream_amd64_version": "1.2.95.453.g0eeebbed",
+  "upstream_i386_version": "1.0.72.117.g6bd7cc73-35",
   "targets": [
     {
       "chroot": "alma+epel-10-x86_64_v2",
-      "status": "excluded",
-      "reason": "Current scope builds x86_64 RPMs only; no separate x86_64_v2 RPM is produced."
-    },
-    {
-      "chroot": "alma+epel-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "architecture": "x86_64_v2",
+      "status": "candidate",
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation. This uses the upstream x86_64 binary, not a source rebuild optimized for v2."
     },
     {
       "chroot": "alma+epel-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "alma-kitten+epel-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "alma-kitten+epel-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "alma-kitten+epel-10-x86_64_v2",
-      "status": "excluded",
-      "reason": "Current scope builds x86_64 RPMs only; no separate x86_64_v2 RPM is produced."
+      "architecture": "x86_64_v2",
+      "status": "candidate",
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation. This uses the upstream x86_64 binary, not a source rebuild optimized for v2."
     },
     {
       "chroot": "almalinux-10-x86_64_v2",
-      "status": "excluded",
-      "reason": "Current scope builds x86_64 RPMs only; no separate x86_64_v2 RPM is produced."
-    },
-    {
-      "chroot": "almalinux-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "architecture": "x86_64_v2",
+      "status": "candidate",
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation. This uses the upstream x86_64 binary, not a source rebuild optimized for v2."
     },
     {
       "chroot": "almalinux-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "almalinux-kitten-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "almalinux-kitten-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "almalinux-kitten-10-x86_64_v2",
-      "status": "excluded",
-      "reason": "Current scope builds x86_64 RPMs only; no separate x86_64_v2 RPM is produced."
-    },
-    {
-      "chroot": "centos-stream+epel-next-8-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "architecture": "x86_64_v2",
+      "status": "candidate",
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation. This uses the upstream x86_64 binary, not a source rebuild optimized for v2."
     },
     {
       "chroot": "centos-stream+epel-next-8-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "centos-stream+epel-next-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "centos-stream+epel-next-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "centos-stream-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "centos-stream-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
-    },
-    {
-      "chroot": "centos-stream-8-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "centos-stream-8-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
-      "chroot": "centos-stream-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
-    },
-    {
       "chroot": "centos-stream-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "custom-1-x86_64",
+      "architecture": "x86_64",
       "status": "unconfigured",
-      "reason": "Custom chroot repositories and its runtime ABI must be supplied first."
-    },
-    {
-      "chroot": "epel-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Custom chroot repositories and runtime ABI must be supplied first."
     },
     {
       "chroot": "epel-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "epel-8-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "epel-7-x86_64",
+      "architecture": "x86_64",
+      "status": "incompatible",
+      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "epel-8-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "epel-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "epel-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
-      "chroot": "fedora-44-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "fedora-43-x86_64",
+      "architecture": "x86_64",
+      "status": "candidate",
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
+    },
+    {
+      "chroot": "fedora-44-i386",
+      "architecture": "i386",
+      "status": "unavailable",
+      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "fedora-44-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "fedora-45-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "fedora-45-i386",
+      "architecture": "i386",
+      "status": "unavailable",
+      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "fedora-45-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
-    },
-    {
-      "chroot": "fedora-eln-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "fedora-eln-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "fedora-rawhide-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "fedora-rawhide-i386",
+      "architecture": "i386",
+      "status": "unavailable",
+      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "fedora-rawhide-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "mageia-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "mageia-10-i686",
+      "architecture": "i686",
+      "status": "unavailable",
+      "reason": "No current stable 32-bit DEB: the official i386 index only contains legacy 1.0.72.117.g6bd7cc73-35, unlike current amd64 1.2.95.453.g0eeebbed."
     },
     {
       "chroot": "mageia-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "mageia-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "mageia-8-x86_64",
+      "architecture": "x86_64",
+      "status": "incompatible",
+      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "mageia-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "mageia-cauldron-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "mageia-cauldron-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "openeuler-24.03-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "openeuler-20.03-x86_64",
+      "architecture": "x86_64",
+      "status": "incompatible",
+      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
+    },
+    {
+      "chroot": "openeuler-22.03-x86_64",
+      "architecture": "x86_64",
+      "status": "incompatible",
+      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "openeuler-24.03-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "opensuse-leap-16.0-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "opensuse-leap-16.0-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
-    },
-    {
-      "chroot": "opensuse-tumbleweed-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "opensuse-tumbleweed-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
-    },
-    {
-      "chroot": "rhel+epel-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "rhel+epel-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
-    },
-    {
-      "chroot": "rhel-10-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
       "chroot": "rhel-10-x86_64",
+      "architecture": "x86_64",
       "status": "candidate",
-      "reason": "x86 binary can be repackaged; dependency installation and GUI playback still require validation."
+      "reason": "Current amd64 payload can be repackaged; dependency installation and graphical playback still need validation."
     },
     {
-      "chroot": "rhel-8-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
+      "chroot": "rhel-7-x86_64",
+      "architecture": "x86_64",
+      "status": "incompatible",
+      "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     },
     {
       "chroot": "rhel-8-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
-    },
-    {
-      "chroot": "rhel-9-aarch64",
-      "status": "unsupported",
-      "reason": "Spotify publishes no Linux arm64 DEB."
     },
     {
       "chroot": "rhel-9-x86_64",
+      "architecture": "x86_64",
       "status": "incompatible",
       "reason": "Current Spotify DEB requires glibc >= 2.39; this release ships an older ABI."
     }
-  ],
-  "active_architecture": "x86_64",
-  "channel": "stable"
+  ]
 }

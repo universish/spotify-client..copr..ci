@@ -42,7 +42,7 @@ jobs:
           set -euo pipefail
           python3 src/parser_debian_control_file.py stable spotify-client Version
           version=$(cat "$SPOTIFY_METADATA_DIR/spotify-client.stable.Version")
-          tag="v${version}-2"
+          tag="v${version}-3"
           needed=true
           if [[ "$FORCE_RELEASE" != true ]]; then
             if release=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets 2>/dev/null); then
