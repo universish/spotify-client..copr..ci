@@ -80,11 +80,11 @@ exit "${FAKE_EXIT_STATUS:-0}"
         self.assertNotIn(b"--ignore-gpu-blocklist", self.args())
         self.assertEqual(self.args()[-1], b"spotify:track:example")
 
-    def test_amd_wayland_uses_mesa_and_wayland(self):
+    def test_amd_wayland_preserves_native_display_selection(self):
         self.gpu(0, "0x1002", "amdgpu")
         self.env["XDG_SESSION_TYPE"] = "wayland"
         self.assertEqual(self.run_launcher().returncode, 0)
-        self.assertIn(b"--ozone-platform=wayland", self.args())
+        self.assertFalse(any(arg.startswith(b"--ozone-platform=") for arg in self.args()))
         self.assertEqual((self.capture / "env-1").read_text(), "unset|unset")
 
     def test_hybrid_nvidia_x11_gets_prime_and_desktop_gl(self):
@@ -97,13 +97,13 @@ exit "${FAKE_EXIT_STATUS:-0}"
         self.assertIn(b"--ignore-gpu-blocklist", self.args())
         self.assertIn("hybrid=1", result.stderr)
 
-    def test_nvidia_wayland_uses_angle_gl_and_prime(self):
+    def test_nvidia_wayland_uses_working_lpf_desktop_gl_and_prime(self):
         self.gpu(0, "0x1002", "amdgpu")
         self.gpu(1, "0x10de", "nvidia", "570.86.16")
         self.env["XDG_SESSION_TYPE"] = "wayland"
         self.assertEqual(self.run_launcher().returncode, 0)
-        self.assertIn(b"--use-angle=gl", self.args())
-        self.assertIn(b"--ozone-platform=wayland", self.args())
+        self.assertIn(b"--use-gl=desktop", self.args())
+        self.assertFalse(any(arg.startswith(b"--ozone-platform=") for arg in self.args()))
         self.assertEqual((self.capture / "env-1").read_text(), "1|nvidia")
 
     def test_nouveau_is_mesa_not_proprietary_nvidia(self):

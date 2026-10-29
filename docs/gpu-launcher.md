@@ -1,7 +1,12 @@
+The payload-free bootstrap uses `bootstrap/spotify.py` and the same GPU helper
+installed under `/usr/share/spotify-bootstrap/spotify-gpu.sh`. The placement
+examples below describe the legacy local reference generator, not COPR's new
+bootstrap source. GPU selection and bounded fallback behavior are shared.
+
 # Adaptive GPU launcher and RPM integration
 
 `/usr/bin/spotify` reads the user's existing environment/flags files and delegates
-to `/usr/share/spotify/spotify-gpu.sh`. Selection happens in the user's session
+to `/usr/share/spotify-client/spotify-gpu.sh`. Selection happens in the user's session
 on every launch. Root installation scripts do not probe a display or write a
 hardware-specific launcher, and no system-wide GPU configuration is changed.
 
@@ -19,7 +24,7 @@ llvmpipe/softpipe rendering selects software mode. The profile uses
 | --- | --- |
 | Intel/AMD/Nouveau | Mesa ANGLE/OpenGL flags; no NVIDIA environment injection |
 | NVIDIA proprietary, X11 | Desktop GL flags; modern driver compatibility profile |
-| NVIDIA proprietary, Wayland | ANGLE OpenGL plus Wayland Ozone |
+| NVIDIA proprietary, Wayland | Desktop GL matching the working LPF setup; Spotify selects its display backend |
 | Supported hybrid NVIDIA | PRIME render offload and NVIDIA GLX vendor selection |
 | Legacy hybrid NVIDIA driver | Preserve the Mesa/default route without unsupported PRIME offload |
 | Software GL, explicit safe mode | Disable GPU acceleration; clear PRIME selections |
@@ -28,6 +33,8 @@ llvmpipe/softpipe rendering selects software mode. The profile uses
 The NVIDIA profile requests `VaapiVideoDecodeLinuxGL`,
 `VaapiVideoEncoderLinuxGL`, zero-copy, overlays and the GPU blocklist override.
 Mesa requests the shared acceleration features without NVIDIA-specific settings.
+Accelerated profiles do not force Ozone or a device scale factor; Spotify retains
+its native backend and DPI selection. Existing user flags can override that choice.
 Actual video acceleration depends on the driver, codecs and Spotify/CEF build;
 requesting these features does not install a VA-API driver or prove support.
 
@@ -73,12 +80,12 @@ Requires: coreutils
 # The prepared source tarball already includes the generated wrapper and helper.
 cp -ar usr %{buildroot}/
 chmod 0755 %{buildroot}%{_bindir}/spotify
-chmod 0755 %{buildroot}%{_datadir}/spotify/spotify-gpu.sh
+chmod 0755 %{buildroot}%{_datadir}/spotify-client/spotify-gpu.sh
 desktop-file-validate %{buildroot}%{_datadir}/applications/spotify.desktop
 
 %files
 %{_bindir}/spotify
-%{_datadir}/spotify/
+%{_datadir}/spotify-client/
 %{_datadir}/applications/spotify.desktop
 %{_datadir}/icons/hicolor/*/apps/spotify-client.*
 ```

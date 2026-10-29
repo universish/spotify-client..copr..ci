@@ -1,0 +1,21 @@
+LICENSING NOTICE
+
+This repository contains material with different ownership and license status.
+There is no blanket license covering Spotify or all inherited packaging files.
+
+1. Original contributions made by universish in 2026 are offered under the MIT
+   license in licenses/MIT-new-contributions.txt, only to the extent universish
+   holds the relevant rights. This does not relicense pre-existing code.
+2. Inherited spotify-rpm-packager material remains owned by its original authors.
+   No general license was located in the inspected upstream Git tree. Public
+   availability or forkability does not establish permission for redistribution.
+   Obtain the relevant permission before distributing a combined bootstrap.
+3. licenses/LPF-bootstrap-LICENSE.txt is the reference LPF bootstrap license;
+   it applies to the corresponding LPF material only. Its presence does not
+   license unrelated files or Spotify. See COPYRIGHT for provenance.
+4. Spotify application binaries, icons, branding and bundled resources remain
+   governed by Spotify and third-party terms. They are excluded from the grant
+   for packaging contributions. Preserve their original notices, including
+   Apps/native-licenses.html. This project grants no Spotify redistribution right.
+
+See eula.txt and docs/legal-distribution.md before any public binary/SRPM upload.

@@ -37,3 +37,18 @@ The same amd64 binary is used on v2 targets.
 Graphical login, audio playback and clean dependency transactions on every listed
 distribution have not been confirmed. COPR remote publication was not performed.
 No private Spotify Developer credentials were read or added.
+
+
+## LPF compatibility and bootstrap work (2026-10-29)
+
+The original LPF DEB 1.3.4.258.gc60b10b0946a was verified against official
+metadata. Mandatory ClamAV scan passed; PUA.Win.Trojan.Xored-1 was separately
+retained as advisory. The reference SRPM and x86_64 RPM built locally. Both
+RPM %check and a subsequent extraction/hash-manifest check preserved every
+listed vendor file. No application was installed or launched by those checks.
+
+A payload-free bootstrap SRPM and binary RPM also built locally. Its RPM file
+list contains only the public launcher, source metadata, Python/shell helpers,
+and legal notices. A further end-to-end local-target build and GUI consent
+regressions are being verified; this section does not claim every distribution
+or physical GUI has been tested. Validation logs remain under output/.

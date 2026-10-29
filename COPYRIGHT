@@ -1,0 +1,24 @@
+COPYRIGHT AND ATTRIBUTION
+
+Spotify client and brand: Spotify and its licensors retain their respective
+rights. Bundled third-party notices include Apps/native-licenses.html in the
+original DEB. No ownership of that material is claimed by this project.
+
+Inherited packaging: zicstardust/spotify-rpm-packager, original authors and
+contributors recorded in Git history, including Isaias Fernando da Silva Rosa
+and Zic Stardust. Names are attribution, not evidence of a license grant.
+Source: https://github.com/zicstardust/spotify-rpm-packager
+
+Original fork contributions: Copyright (c) 2026 universish. See LICENSE for the
+limited scope of the MIT grant; inherited code is not relicensed.
+
+LPF reference: rpmfusion/lpf-spotify-client and spotify-make commit
+29df615b140fc4a671ac729a7ad8633bf7233da8, used to study layout and lifecycle.
+The reference bootstrap license and historical EULA are retained verbatim in
+licenses/. The historical EULA is not presented as Spotify's current agreement.
+Source: https://github.com/rpmfusion/lpf-spotify-client
+Source: https://github.com/sergiomb2/spotify-make
+
+All pre-existing notices and third-party license terms remain applicable.
+Spotify is named to identify compatibility. This is an independent community
+packaging project and is not endorsed, sponsored or supported by Spotify.

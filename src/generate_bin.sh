@@ -6,13 +6,28 @@ cat > "$output/spotify" <<'LAUNCHER'
 #!/bin/bash
 set -euo pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spotify"
-data_dir=/usr/share/spotify
+data_dir=/usr/share/spotify-client
 # SPOTIFY_DATA_DIR is useful for testing this launcher with a stub executable.
 data_dir=${SPOTIFY_DATA_DIR:-$data_dir}
 
+# LPF puts the vendor's own libraries first; optional codecs remain secondary.
+library_path=$data_dir
 if [[ -d "$data_dir/ffmpeg" ]]; then
-    export LD_LIBRARY_PATH="$data_dir/ffmpeg${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    library_path+=":$data_dir/ffmpeg"
 fi
+export LD_LIBRARY_PATH="$library_path${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# LPF's numeric locale/session compatibility fixes, without deleting user caches.
+if [[ -z ${LC_NUMERIC+x} ]]; then
+    numeric_locale=C.UTF-8
+    while IFS= read -r available_locale; do
+        if [[ "${available_locale,,}" == en_us.utf8 || "${available_locale,,}" == en_us.utf-8 ]]; then
+            numeric_locale=$available_locale
+            break
+        fi
+    done < <(locale -a 2>/dev/null || true)
+    export LC_NUMERIC=$numeric_locale
+fi
+unset DESKTOP_SESSION GNOME_DESKTOP_SESSION_ID
 
 debug=${SPOTIFY_DEBUG:-0}
 gpu_mode=${SPOTIFY_GPU_MODE:-auto}

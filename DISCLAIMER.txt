@@ -1,0 +1,27 @@
+COMMUNITY PACKAGING DISCLAIMER
+
+This is an independent community bootstrap, not an official Spotify product.
+Spotify has not endorsed or provided support for this package.
+
+Spotify software and content remain subject to Spotify's applicable terms and
+the rights of its licensors. You must review and comply with those terms and
+applicable law before requesting a download, local build, installation or use.
+This project grants no additional Spotify license or redistribution right.
+
+The packaging helpers are provided AS IS, without warranties, to the extent
+permitted by applicable law. Malware scanning and hash verification reduce
+certain risks but cannot establish absence of every threat or defect.
+
+You decide whether to request the local build and installation, and remain
+responsible for your own use, account, backups and compliance obligations.
+This notice does not transfer the maintainer's own legal obligations to you,
+exclude non-excludable liability, waive mandatory consumer rights, or create
+permission to host proprietary Spotify binaries. Clicking consent is a request
+to proceed under the applicable terms, not a universal release from liability.
+
+If you decline, the bootstrap does not download/build or launch the client.
+If this project's spotify-client-local package is installed, it requests its
+removal through the system authorization dialog. If permission is denied or
+removal fails, the client remains installed but this launcher refuses to run it.
+Existing LPF/vendor packages are not silently removed. The small payload-free
+bootstrap itself can be removed through your system package manager.

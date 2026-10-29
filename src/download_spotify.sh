@@ -10,7 +10,7 @@ if [[ "${SOURCE:-deb}" != deb ]]; then
     exit 2
 fi
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-python3 - "$metadata_dir/spotify-client.$branch.json" "$version" "$download_dir" "$script_dir" <<'DOWNLOAD'
+python3 - "$metadata_dir/spotify-client.$branch.json" "$version" "$download_dir" "$script_dir" "${SPOTIFY_DEB_FILE:-}" <<'DOWNLOAD'
 import hashlib
 import json
 import os
@@ -32,6 +32,25 @@ if not re.fullmatch(r"pool/non-free/s/spotify-client/[A-Za-z0-9_.+~-]+[.]deb", f
 if not re.fullmatch(r"[0-9a-f]{64}", digest):
     raise SystemExit("Missing or invalid upstream SHA256")
 destination = directory / f"spotify-client_{version}_amd64.deb"
+if sys.argv[5]:
+    # LPF can reuse a previously downloaded source; it still gets the same verification and scan.
+    cached = Path(sys.argv[5])
+    fd, temporary = tempfile.mkstemp(prefix=".spotify-cache-", dir=directory)
+    try:
+        checksum, size = hashlib.sha256(), 0
+        with os.fdopen(fd, "wb") as output, cached.open("rb") as source:
+            while chunk := source.read(1024 * 1024):
+                output.write(chunk)
+                checksum.update(chunk)
+                size += len(chunk)
+        if checksum.hexdigest() != digest or size != int(record["Size"]):
+            raise SystemExit("Cached DEB checksum/size mismatch; stopping before extraction")
+        os.replace(temporary, destination)
+        print(f"Verified cached DEB {cached} (SHA256 {digest})")
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    raise SystemExit(0)
 for base in REPOSITORIES:
     fd, temporary = tempfile.mkstemp(prefix=".spotify-download-", dir=directory)
     try:

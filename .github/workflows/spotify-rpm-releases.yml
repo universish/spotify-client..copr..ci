@@ -1,4 +1,4 @@
-name: Stable Spotify RPMs and COPR
+name: Stable Spotify bootstrap RPMs and COPR
 
 on:
   schedule:
@@ -60,10 +60,13 @@ jobs:
           sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 binutils desktop-file-utils
       - name: Run regression tests
         run: python3 -m unittest discover -s tests -v
-      - name: Verify DEB, refresh signatures, extract and scan all payloads
+      - name: Build payload-free bootstrap source RPM and scan it
         env:
-          SPOTIFY_METADATA_FILE: ${{ github.workspace }}/metadata/spotify-client.stable.json
-        run: src/build_once.sh stable output
+          SCAN_REPORT_DIR: ${{ github.workspace }}/output/scan-reports
+        run: |
+          python3 tools/build_bootstrap.py metadata/spotify-client.stable.json output
+          src/scan_payload.sh --update
+          src/scan_payload.sh --scan output/spotify-*.src.rpm
       - name: Build and check versioned x86_64 RPM
         run: |
           src/build_binary.sh output/spotify-*.src.rpm output
@@ -143,17 +146,21 @@ jobs:
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          Official stable Spotify DEB repackaged as `spotify` for x86_64 Linux.
-          The original DEB and extracted payload are scanned with freshly updated
-          ClamAV signatures, heuristic and potentially unwanted application detection.
-          A detection, encrypted/unreadable content, scan error or scan limit stops packaging.
-          COPR submission to the currently enabled compatible targets completed successfully.
+          Community bootstrap for the official stable Spotify client on x86_64 Linux.
+          These RPMs and SRPMs contain only packaging helpers and pinned source metadata.
+          No Spotify binaries, icons or proprietary application resources are included.
+          The bootstrap source was scanned with updated ClamAV signatures before delivery.
 
-          Install with `sudo dnf install ./spotify-*.x86_64.rpm` and start with `spotify`.
-          Use `spotify --debug` for terminal diagnostics.
-          Runtime requirements follow the official DEB and the RPM's listed libraries.
-          GitHub RPMs are unsigned; SHA256SUMS supplies integrity checks.
-          Scan, build and COPR logs are available in the workflow artifacts.
+          Install the bootstrap with `sudo dnf install ./spotify-*.x86_64.rpm`.
+          Run `spotify --setup`, read the terms, then explicitly request the local build.
+          The official DEB is downloaded, SHA256-verified and scanned on your computer.
+          Normal malware, heuristic findings and scan errors block the local client build.
+          PUA-only detections are reported separately. Install the resulting local RPM
+          using the printed command; then start the client with `spotify`.
+          Spotify is proprietary. This community project is not endorsed by Spotify.
+          The local client RPM is not for redistribution.
+          Bootstrap RPMs are unsigned; SHA256SUMS provides integrity checks only.
+          Build, scan and COPR logs are available in workflow artifacts.
           NOTES
           # The tag was atomically reserved before scanning; never move/reuse it.
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

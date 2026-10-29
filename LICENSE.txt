@@ -1,0 +1,3 @@
+See LICENSE for the repository licensing notice and scope.
+The original LPF reference text formerly here is retained as
+licenses/LPF-bootstrap-LICENSE.txt. It does not license Spotify or this whole fork.

@@ -4,25 +4,25 @@ Project: https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/
 
 ## Hosting constraint
 
-Fedora COPR's published terms restrict uploaded material to accepted Fedora
-licenses. Spotify's proprietary client is not FOSS. This fork's binary RPM and
-SRPM contain Spotify's proprietary payload; the packaging script being open source
-does not change the payload's license. Confirm any exception or permission with
-the COPR maintainers before publishing it on Fedora infrastructure. A separate
-RPM repository is an alternative, subject to Spotify's redistribution terms.
+The release workflow now uploads a **payload-free community bootstrap** SRPM.
+`tools/build_bootstrap.py` uses an explicit allowlist of new MIT helpers, pinned
+source metadata and notices. Spotify binaries, icons, application archives and
+inherited generators with unresolved licensing are not included.
+
+The separately built `spotify-client-local` RPM is proprietary, remains on the
+user's computer, and must not be submitted to COPR or GitHub by this workflow.
+The standalone legacy `src/build_once.sh` path is retained for local comparisons;
+it is no longer the workflow's COPR source producer.
 
 Reference: https://docs.copr.fedorainfracloud.org/user_documentation.html#what-i-can-build-in-copr
-
-The zicstardust/spotify-client project uses direct SRPM upload (`source_type:
-upload`). This workflow uses the same technical upload mechanism. Credentials
-are consumed only inside GitHub Actions; no credential is stored in Git.
+Legal analysis: [legal-distribution.md](legal-distribution.md).
 
 ## GitHub secret and running the workflow
 
 1. Log in at https://copr.fedorainfracloud.org/api/ and copy the complete generated configuration.
 2. Open https://github.com/universish/spotify-client..copr..ci/settings/secrets/actions
 3. Choose New repository secret, name it `COPR_CONFIG`, and paste the complete configuration as its value.
-4. Open Actions → Stable Spotify RPMs and COPR → Run workflow. No force or submit checkbox is needed.
+4. Open Actions → Stable Spotify bootstrap RPMs and COPR → Run workflow. No force or submit checkbox is needed.
 
 ```ini
 [copr-cli]
@@ -42,7 +42,7 @@ or downloading the DEB; unchanged scheduled checks need no COPR secret.
 ## Submission and release numbering
 
 `spotify-rpm-releases.yml` performs version detection, number reservation,
-mandatory scanning, source/binary RPM builds, automatic COPR upload and stable
+bootstrap source construction/scanning, source/binary RPM builds, automatic COPR upload and stable
 GitHub publication in that order. See [release-flow.md](release-flow.md).
 `SPOTIFY_RELEASE` is carried unchanged into RPM `Release:` and its changelog.
 The source RPM's version-release is checked before submission.
@@ -51,8 +51,9 @@ The source RPM's version-release is checked before submission.
 live enabled chroots. An API read failure or an empty compatible list stops
 submission; it never falls back to stale/all targets. Upload logs and the exact
 selected target list are saved in the workflow's COPR validation artifact.
-Network is needed while preparing the SRPM for Spotify and ClamAV. Binary rebuilds
-on COPR consume the prepared tarball and require no outbound build network.
+Metadata checks contact Spotify; bootstrap-source scanning updates ClamAV.
+COPR binary rebuilds consume only free bootstrap sources and need no outbound
+build network. The proprietary DEB is downloaded/scanned on the user host.
 
 For a new packaging number, use the GitHub workflow. Rebuilding an old uploaded
 source directly in COPR keeps that source RPM's number. The optional SCM Makefile

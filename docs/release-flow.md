@@ -60,9 +60,13 @@ The selected official HTTPS metadata supplies the filename, size and SHA256. Tha
 record is pinned between jobs. After verification, freshclam updates isolated
 official signatures. The DEB is then raw-extracted without running maintainer
 scripts. The original DEB, unpacked files, control scripts, ELF binaries, supported
-nested archives and optional additional codec libraries are scanned. PUA and
-heuristic detection are enabled; encrypted content, broken executable alerts,
-scan errors and exhausted limits block packaging.
+nested archives and optional additional codec libraries are scanned. The mandatory
+malware scan includes heuristics; encrypted content, broken executable alerts,
+scan errors and exhausted limits block packaging. A second scan also enables PUA.
+Only exit code 1 accompanied exclusively by `PUA.*` detections is advisory;
+malware/heuristic detections or errors in either pass still block packaging.
+`clamscan.log` records the mandatory pass; `clamscan-pua.log` and `pua-status.json`
+retain the separate PUA result. Reports are reset for each attempt.
 
 ClamAV can detect known malware and backdoor signatures; a clean result is not
 proof that every unknown or deliberately hidden threat is absent. No external
@@ -73,3 +77,17 @@ configuration and only compatible candidate targets; removed chroots are never
 restored by the workflow. Submission waits for COPR. GitHub publication depends
 on successful COPR completion. A failed scan/build/upload leaves evidence in
 workflow artifacts and does not expose a new complete GitHub release.
+
+## Payload-free delivery model (2026-10-29)
+
+The release job now builds only the community bootstrap using
+`tools/build_bootstrap.py`; it does not use `src/build_once.sh` or upload any
+Spotify payload. The bootstrap SRPM is scanned before its binary build and
+COPR delivery. Earlier descriptions of raw DEB scans above describe the local
+client build, now performed by `bootstrap/spotify.py` on the user's machine.
+Version detection/reservation/scheduling remain unchanged. The installed helper
+shows terms and consent before download, then verifies the pinned SHA256, runs
+freshclam and both scans, preserves vendor files and builds spotify-client-local.
+The local target requires the bootstrap `spotify` package. Only its installation
+or removal uses the system authorization prompt. Rejection cancels activity and
+requests removal of that target only; authorization failure is surfaced.

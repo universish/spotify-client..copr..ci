@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 universish
 # Unprivileged runtime GPU selection; no hardware state is written into /usr.
 set -euo pipefail
 binary=${1:?Executable required}
@@ -48,8 +50,8 @@ if [[ "$mode" == auto ]]; then
     if [[ "${renderer,,}" == *llvmpipe* || "${renderer,,}" == *softpipe* ]]; then
         mode=software
     elif [[ "$nvidia" == 1 && ( "$hybrid" == 0 || "$driver_major" -ge 435 ) ]]; then
-        mode=nvidia
-        [[ "$session" != x11 ]] || mode=nvidia-desktop
+        # The user's working LPF launcher uses desktop GL on Wayland/XWayland too.
+        mode=nvidia-desktop
     elif [[ "$mesa" == 1 ]]; then
         mode=mesa
     else
@@ -117,7 +119,7 @@ while :; do
                     automatic_env+=(__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia)
                 fi
             fi
-            [[ "$session" != wayland ]] || automatic_flags+=(--ozone-platform=wayland)
+            # Leave Ozone/DPI selection to Spotify, as LPF does. Users can override it.
             ;;
         software)
             clear_env=(-u __NV_PRIME_RENDER_OFFLOAD -u __GLX_VENDOR_LIBRARY_NAME -u __VK_LAYER_NV_optimus)
