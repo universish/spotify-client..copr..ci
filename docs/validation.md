@@ -49,6 +49,22 @@ listed vendor file. No application was installed or launched by those checks.
 
 A payload-free bootstrap SRPM and binary RPM also built locally. Its RPM file
 list contains only the public launcher, source metadata, Python/shell helpers,
-and legal notices. A further end-to-end local-target build and GUI consent
-regressions are being verified; this section does not claim every distribution
-or physical GUI has been tested. Validation logs remain under output/.
+and legal notices. The standalone bootstrap's local-target path subsequently completed with the
+same verified LPF DEB: ClamAV main 63, daily 28168, bytecode 339, normal malware
+scan clean and PUA-only advisory. spotify-client-local-1.3.4.258.gc60b10b0946a-1
+x86_64 RPM was produced and rpm -K returned digests OK. That test used the
+pre-install implementation and did not install the target on this computer.
+
+64 regression tests passed, including terms refusal, root-build refusal,
+wrong-cache rejection, untrusted metadata rejection, GUI cancellation, scoped
+local-target removal, and clearing prior consent on removal failure. GUI
+behavior is simulated by subprocess fixtures; a physical desktop consent dialog
+and privileged package-manager installation have not been exercised. These
+checks do not establish clean install/playback on every target distribution. Validation logs remain under output/.
+
+Review-branch commit e1cb7e4 passed GitHub Validate packaging run 40917710557.
+Manual release/COPR dispatch was rejected by automatic approval review because
+of the prior review-only instruction; explicit publication approval is pending.
+Main's old direct-payload workflow was confirmed by a read-only GitHub file
+fetch. This review branch alone does not disable that workflow or remove old
+payload-containing releases.
