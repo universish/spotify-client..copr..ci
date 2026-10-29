@@ -1,0 +1,20 @@
+{
+  "collected_at_utc": "2026-10-29T23:47:44.148253+00:00",
+  "inspected_deb": "spotify-client_1.3.4.258.gc60b10b0946a_amd64.deb",
+  "channel_of_reference": "testing; installed LPF reference, not the automatic stable channel",
+  "official_index_url": "https://repository-origin.spotify.com/dists/testing/non-free/binary-amd64/Packages",
+  "download_url": "https://repository-origin.spotify.com/pool/non-free/s/spotify-client/spotify-client_1.3.4.258.gc60b10b0946a_amd64.deb",
+  "deb_sha256": "20f327441d11b202c82e65b69ec990ef631eb66605da15f41076c049acb718e4",
+  "deb_bytes": 179241028,
+  "license_field": "https://www.spotify.com/legal/end-user-agreement",
+  "notice_path_inside_deb": "usr/share/spotify/Apps/native-licenses.html",
+  "notice_sha256": "ab012ceb05a607360cbeb46960f97d5d9e5ec78f7edfa30f887ea08074bb5880",
+  "license_related_entries": [
+    {
+      "path": "usr/share/spotify/Apps/native-licenses.html",
+      "size": 57530,
+      "kind": "regular"
+    }
+  ],
+  "scope": "native-licenses.html contains bundled third-party notices; it is not a Spotify proprietary redistribution license. No separate full Spotify proprietary license text was found among the license/copyright/eula/doc entries in this exact DEB."
+}

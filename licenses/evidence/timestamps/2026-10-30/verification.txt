@@ -1,0 +1,29 @@
+COPYRIGHT: OK
+DISCLAIMER.txt: OK
+LICENSE: OK
+LICENSE.txt: OK
+eula.txt: OK
+licenses/LPF-bootstrap-LICENSE.txt: OK
+licenses/evidence/README.md: OK
+licenses/evidence/lpf/2026-10-30/license-blob.json: OK
+licenses/evidence/lpf/2026-10-30/license-blob.json.headers.json: OK
+licenses/evidence/lpf/2026-10-30/license-history.json: OK
+licenses/evidence/lpf/2026-10-30/license-history.json.headers.json: OK
+licenses/evidence/lpf/2026-10-30/provenance.json: OK
+licenses/evidence/timestamps/2026-10-30/cacert.pem: OK
+licenses/evidence/timestamps/2026-10-30/cacert.pem.headers.json: OK
+licenses/evidence/timestamps/2026-10-30/tsa.crt: OK
+licenses/evidence/timestamps/2026-10-30/tsa.crt.headers.json: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/DEBIAN-control.txt: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/README.md: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/native-licenses.html: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/official-index.headers.json: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/official-package-record.json: OK
+licenses/spotify/1.3.4.258.gc60b10b0946a/provenance.json: OK
+tools/verify_license_evidence.sh: OK
+Using configuration from /etc/pki/tls/openssl.cnf
+Warning: certificate from 'licenses/evidence/timestamps/2026-10-30/tsa.crt' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert
+Verification: OK
+Using configuration from /etc/pki/tls/openssl.cnf
+Warning: certificate from 'licenses/evidence/timestamps/2026-10-30/tsa.crt' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert
+Verification: OK

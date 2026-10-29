@@ -1,0 +1,22 @@
+HTTP/2 200 
+server: nginx
+date: Thu, 29 Oct 2026 23:49:14 GMT
+content-type: application/timestamp-reply
+x-powered-by: PHP/7.4.13
+expires: 0
+content-transfer-encoding: binary
+content-disposition: attachment; filename=/tmp/0005512637tsr
+pragma: no-cache
+strict-transport-security: max-age=63072000; includeSubdomains; preload
+x-frame-options: DENY
+x-content-type-options: nosniff
+content-security-policy: default-src 'unsafe-inline' 'unsafe-eval' 'self'; script-src 'self' https://oss.maxcdn.com/; img-src 'self' https://www.paypal.com https://www.paypalobjects.com; report-uri https://www.busindre.com/hpkp_violation.php
+x-xss-protection: 1; mode=block
+public-key-pins: pin-sha256="C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=";pin-sha256="YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=";pin-sha256="sRHdihwgkaib1P1gxX8HFszlD+7/gTfNvuAybgLPNis=";pin-sha256="Vjs8r4z+80wjNcr1YKepWQboSIRi63WsWXhIMN+eWys=";max-age=2592000; report-uri="https://www.busindre.com/hpkp_violation.php"
+strict-transport-security: max-age=63072000; includeSubdomains; preload
+x-frame-options: DENY
+x-content-type-options: nosniff
+content-security-policy: default-src 'unsafe-inline' 'unsafe-eval' 'self'; script-src 'self' https://oss.maxcdn.com/; img-src 'self' https://www.paypal.com https://www.paypalobjects.com; report-uri https://www.busindre.com/hpkp_violation.php
+x-xss-protection: 1; mode=block
+public-key-pins: pin-sha256="C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=";pin-sha256="YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=";pin-sha256="sRHdihwgkaib1P1gxX8HFszlD+7/gTfNvuAybgLPNis=";pin-sha256="Vjs8r4z+80wjNcr1YKepWQboSIRi63WsWXhIMN+eWys=";max-age=2592000; report-uri="https://www.busindre.com/hpkp_violation.php"
+

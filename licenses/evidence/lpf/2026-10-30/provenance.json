@@ -1,0 +1,22 @@
+{
+  "collected_at_utc": "2026-10-29T23:46:35.334450+00:00",
+  "repository": "https://github.com/rpmfusion/lpf-spotify-client",
+  "source_path": "LICENSE",
+  "source_commit": "26fc6fe3914edcb5e66334d1df66b163424bde97",
+  "source_commit_url": "https://github.com/rpmfusion/lpf-spotify-client/commit/26fc6fe3914edcb5e66334d1df66b163424bde97",
+  "permalink": "https://github.com/rpmfusion/lpf-spotify-client/blob/26fc6fe3914edcb5e66334d1df66b163424bde97/LICENSE",
+  "raw_url": "https://raw.githubusercontent.com/rpmfusion/lpf-spotify-client/26fc6fe3914edcb5e66334d1df66b163424bde97/LICENSE",
+  "author_date": "2013-11-21T19:45:31Z",
+  "committer_date": "2013-11-21T19:45:31Z",
+  "github_commit_verification": {
+    "verified": false,
+    "reason": "unsigned",
+    "signature": null,
+    "payload": null,
+    "verified_at": null
+  },
+  "git_blob_sha1": "7d0db92d87206989ab77f1cd1a71fa8362b8ef3e",
+  "sha256": "4efea95454b6018caa340eae57fd208dfc4ee2e142a06a3f06e80c7fac22f620",
+  "bytes": 427,
+  "timestamp_scope": "Local collection time and HTTP response Date are observations, not an independent trusted timestamp or notarization. Git commit dates can be chosen by authors."
+}

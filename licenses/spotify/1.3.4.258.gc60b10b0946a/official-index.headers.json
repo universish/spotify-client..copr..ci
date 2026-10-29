@@ -1,0 +1,18 @@
+{
+  "server": "envoy",
+  "date": "Thu, 29 Oct 2026 23:47:42 GMT",
+  "content-type": "text/plain",
+  "Content-Length": "993",
+  "last-modified": "Mon, 12 Oct 2026 09:30:04 GMT",
+  "vary": "Accept-Encoding",
+  "etag": "\"6acca89c-3e1\"",
+  "expires": "Thu, 01 Jan 1970 00:00:01 GMT",
+  "cache-control": "no-cache",
+  "accept-ranges": "bytes",
+  "strict-transport-security": "max-age=31536000",
+  "x-content-type-options": "nosniff",
+  "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+  "via": "HTTP/2 edgeproxy, 1.1 google",
+  "Alt-Svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+  "Connection": "close"
+}

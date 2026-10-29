@@ -1,0 +1,6 @@
+{
+  "modified_manifest_rejected": true,
+  "exit_code": 1,
+  "stdout": "Verification: FAILED\n",
+  "stderr": "Using configuration from /etc/pki/tls/openssl.cnf\nWarning: certificate from 'licenses/evidence/timestamps/2026-10-30/tsa.crt' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' is not a CA cert\n000383929C7F0000:error:17800067:time stamp routines:ts_check_imprints:message imprint mismatch:crypto/ts/ts_rsp_verify.c:508:\n"
+}

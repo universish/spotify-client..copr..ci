@@ -1,0 +1,7 @@
+
+# Preserve original license and evidence bytes for hash/timestamp verification.
+licenses/LPF-bootstrap-LICENSE.txt -text whitespace=-blank-at-eof
+licenses/spotify/** -text whitespace=-blank-at-eof,-blank-at-eol,-space-before-tab
+licenses/evidence/** -text
+# Keep the captured HTTP headers' CRLF bytes intact.
+licenses/evidence/**/response.headers.txt -text -diff

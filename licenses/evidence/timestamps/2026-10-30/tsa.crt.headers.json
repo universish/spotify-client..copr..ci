@@ -1,0 +1,13 @@
+{
+  "Server": "nginx",
+  "Date": "Thu, 29 Oct 2026 23:48:20 GMT",
+  "Content-Type": "application/octet-stream",
+  "Content-Length": "2273",
+  "Last-Modified": "Sun, 15 Feb 2026 21:59:18 GMT",
+  "Connection": "close",
+  "ETag": "\"699241b6-8e1\"",
+  "Expires": "Thu, 31 Dec 2037 23:55:55 GMT",
+  "Cache-Control": "max-age=315360000",
+  "Pragma": "public",
+  "Accept-Ranges": "bytes"
+}
