@@ -22,7 +22,7 @@ sudo dnf install ./spotify-*.x86_64.rpm
 spotify --setup
 ```
 
-COPR'da yeni kurucu yayımlandığında:
+COPR'dan yayımlanan kurucuyu kurmak için:
 
 ```sh
 sudo dnf copr enable universish/Spotify..Client
@@ -90,8 +90,10 @@ LPF'nin 1.3.4 kaynağı ile resmî stable 1.2.95 farkı [LPF belgesinde](docs/lp
 açıklanır; testing otomatik seçilmez.
 
 `COPR_CONFIG` secret ayarı ve etkin dağıtım seçimi [COPR belgesindedir](docs/copr.md).
-Yeni kurucu henüz main'e birleştirilmediyse eski main iş akışı eski davranışı
-korur; bu dalın varlığı eski yayınları otomatik silmez.
+Main kurucu modeline geçirilmiştir. İlk doğrulanan kurucu yayını
+[`1.2.95.453.g0eeebbed-4`](https://github.com/universish/spotify-client..copr..ci/releases/tag/v1.2.95.453.g0eeebbed-4)
+olur; COPR'da 17 hedefte başarıyla derlenmiştir. Eski doğrudan istemci RPM/SRPM
+ve Actions paket kopyaları kaldırılmış, sürüm etiketleri korunmuştur.
 Nginx, Docker Hub, GHCR veya telemetri kullanılmaz. İndirme grafikleri GitHub
 Releases sayaçlarını gösterir, aktif kullanıcı sayısını göstermez.
 
@@ -107,4 +109,4 @@ src/build_binary.sh output/spotify-*.src.rpm output
 Kurucu kaynak arşivi açık dosya listesiyle oluşturulur; eski çatala ait
 lisansı belirsiz üreticiler ve Spotify verileri bu arşive alınmaz.
 `src/build_once.sh` eski doğrudan istemci üretimini yalnız yerel karşılaştırmalar
- için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.
+için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.

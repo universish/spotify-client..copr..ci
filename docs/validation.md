@@ -63,8 +63,28 @@ and privileged package-manager installation have not been exercised. These
 checks do not establish clean install/playback on every target distribution. Validation logs remain under output/.
 
 Review-branch commit e1cb7e4 passed GitHub Validate packaging run 40917710557.
-Manual release/COPR dispatch was rejected by automatic approval review because
-of the prior review-only instruction; explicit publication approval is pending.
-Main's old direct-payload workflow was confirmed by a read-only GitHub file
-fetch. This review branch alone does not disable that workflow or remove old
-payload-containing releases.
+Publication was initially held pending approval. After explicit approval,
+main fast-forwarded to 8d026e4 and the payload-free workflow was manually
+started from the review branch through the authenticated GitHub UI. API dispatch
+and Actions artifact deletion returned 403 with the available Git credential;
+no credential permissions were expanded.
+
+Actions run 40919031213 completed detect, build, COPR and publish successfully.
+COPR build 11227671 reports succeeded for all 17 submitted compatible targets.
+Public stable release v1.2.95.453.g0eeebbed-4 contains:
+
+* spotify-1.2.95.453.g0eeebbed-4.src.rpm: 23,275 bytes.
+* spotify-1.2.95.453.g0eeebbed-4.x86_64.rpm: 23,419 bytes.
+* SHA256SUMS.
+
+The uploaded COPR source RPM was independently downloaded and its source tarball
+inspected: precisely eight allowlisted helper/notice/metadata files, no vendor
+application tree or ELF payload. Content hashes are retained locally in
+output/delivered-bootstrap-4/source-content-audit.json.
+
+The four former direct-client release RPM/SRPM assets were removed, their tags
+retained and release descriptions marked retired. With additional explicit
+approval, package ZIP artifacts 12762506955 and 12763635337 were deleted through
+the authenticated GitHub UI. Fresh API listings confirm only metadata,
+validation logs and download statistics remain for both old runs. The public
+bootstrap release and its current package artifacts were not removed.

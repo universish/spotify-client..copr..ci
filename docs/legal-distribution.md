@@ -12,7 +12,8 @@ Spotify target non-redistributable. The installed target spec separately declare
 `No modification permitted, non-redistributable`. LPF builds the target on the
 user's computer. The reference's bootstrap license does not license Spotify.
 
-Our current source and binary RPMs both contain the proprietary application.
+The former direct-client source and binary RPMs both contained the proprietary
+application. The replacement bootstrap RPMs contain only free helpers and notices.
 An SRPM is not an exception merely because its extension says source. Scanning,
 preserving original bytes, attribution, charging nothing, and an EULA disclaimer
 do not create redistribution permission.
@@ -41,11 +42,20 @@ relicense this repository.
 
 ## Current delivery scope
 
-Changes remain on `codex/spotify-automation-gpu`. The new workflow publishes
-payload-free bootstrap RPMs/SRPMs. Inherited generators with unresolved licensing
-are excluded from that source archive. Main and historical payload-containing
-assets are not changed merely by pushing this branch; their operational cleanup
-must be explicitly verified separately.
+The owner explicitly approved migration and cleanup. Main now contains the
+payload-free bootstrap workflow. Release
+[v1.2.95.453.g0eeebbed-4](https://github.com/universish/spotify-client..copr..ci/releases/tag/v1.2.95.453.g0eeebbed-4)
+was produced by successful Actions run 40919031213 and COPR build 11227671
+(17 selected targets). The uploaded source RPM was downloaded and inspected:
+its source archive contains exactly eight allowlisted helper/notice/metadata
+files, with no proprietary application payload.
+
+The four direct-client RPM/SRPM assets in the -2 and -3 releases were removed;
+the tags remain reserved to protect numbering history. The two corresponding
+old Actions package ZIP artifacts (12762506955 and 12763635337) were also removed
+with explicit approval and their absence verified on 2026-10-30. Their logs,
+metadata and statistics remain available. Inherited generators with unresolved
+licensing remain outside the distributed bootstrap source archive.
 
 `eula.txt` is a third-party terms notice with current official links, not a new
 Spotify contract. Original vendor notices are kept within the app tree. The bootstrap shows the notice and consent checkbox before local download/build.
