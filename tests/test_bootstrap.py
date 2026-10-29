@@ -89,3 +89,98 @@ class BootstrapTests(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, 'will not launch'):
                     client.revoke_local_client()
                 self.assertFalse((path / 'consent.json').exists())
+
+    def test_dialog_failure_is_not_a_rejection_and_never_removes_package(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            (path / 'eula.txt').write_text('Terms fixture')
+            with patch.object(client, 'HERE', path), patch.dict(os.environ, DISPLAY=':test'), patch.object(client.shutil, 'which', return_value='/usr/bin/zenity'), patch.object(client.subprocess, 'run', return_value=SimpleNamespace(returncode=255)), patch.object(client, 'revoke_local_client') as remove:
+                with self.assertRaisesRegex(SystemExit, 'dialog failed'):
+                    client.consent([])
+                remove.assert_not_called()
+
+    def test_consent_is_bound_to_selected_version_and_packaging_release(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            (path / 'eula.txt').write_text('Terms fixture')
+            record = self.record()
+            record['PackagingRelease'] = 4
+            (path / 'source.json').write_text(json.dumps(record))
+            with patch.object(client, 'HERE', path), patch.object(client, 'state_dir', return_value=path):
+                client.consent(['--accept-spotify-terms'])
+                self.assertTrue(client.has_consent())
+                record['PackagingRelease'] = 5
+                (path / 'source.json').write_text(json.dumps(record))
+                self.assertFalse(client.has_consent())
+                record['PackagingRelease'] = 4
+                record['RPMVersion'] = '1.2.4'
+                record['Filename'] = 'pool/non-free/s/spotify-client/spotify-client_1.2.4_amd64.deb'
+                (path / 'source.json').write_text(json.dumps(record))
+                self.assertFalse(client.has_consent())
+
+    def test_old_notice_only_consent_does_not_authorize_new_client(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            (path / 'eula.txt').write_text('Terms fixture')
+            (path / 'source.json').write_text(json.dumps(self.record()))
+            with patch.object(client, 'HERE', path), patch.object(client, 'state_dir', return_value=path):
+                (path / 'consent.json').write_text(json.dumps({'notice_sha256':client.consent_digest()}))
+                self.assertFalse(client.has_consent())
+
+    def test_installed_client_requires_correct_version_and_at_least_bootstrap_revision(self):
+        from types import SimpleNamespace
+        expected = {'version':'1.2.3','release':'4','deb_sha256':'0'*64}
+        with patch.object(client, 'approval_subject', return_value=expected):
+            for version, release, result in [('1.2.2','9',False), ('1.2.3','3',False), ('1.2.3','4',True), ('1.2.3','5.fc44',True)]:
+                with self.subTest(version=version,release=release), patch.object(client.subprocess, 'run', return_value=SimpleNamespace(returncode=0,stdout=version+'\n'+release+'\n')):
+                    self.assertEqual(client.installed_current(),result)
+
+    def test_outdated_client_is_never_launched(self):
+        with patch.object(client,'has_consent',return_value=True), patch.object(client,'installed_current',return_value=False), patch.object(os,'execve') as execute:
+            with self.assertRaisesRegex(SystemExit,'missing or outdated'):
+                client.launch([])
+            execute.assert_not_called()
+
+    def test_invalid_consent_record_is_unapproved_not_a_launcher_crash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)
+            with patch.object(client,'state_dir',return_value=path):
+                for contents in ('[]', 'null', '"wrong"', '{broken'):
+                    with self.subTest(contents=contents):
+                        (path/'consent.json').write_text(contents)
+                        self.assertFalse(client.has_consent())
+
+    def test_pending_rpm_is_bound_to_identity_hash_and_source_context(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            folder=root/'1.2.3';folder.mkdir()
+            rpm=folder/'spotify-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
+            subject={'version':'1.2.3','release':'4','deb_sha256':'1'*64}
+            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='spotify-client-local\n1.2.3\n4\n')):
+                client.remember_pending(rpm)
+                self.assertEqual(client.pending_install(),(rpm,4))
+                rpm.write_bytes(b'changed-after-build')
+                self.assertIsNone(client.pending_install())
+
+    def test_pending_record_cannot_escape_version_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'1.2.3';folder.mkdir()
+            subject={'version':'1.2.3','release':'4','deb_sha256':'1'*64}
+            (folder/'pending-install.json').write_text(json.dumps({'package':subject,'filename':'../../outside.rpm','SHA256':'0'*64,'Size':1}))
+            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject):
+                self.assertIsNone(client.pending_install())
+
+    def test_install_retry_does_not_repeat_download_scan_or_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);pending=root/'ready.rpm'
+            with patch.object(os,'geteuid',return_value=1000), patch.object(client,'consent'), patch.object(client,'metadata',return_value={'RPMVersion':'1.2.3'}), patch.object(client,'state_dir',return_value=root), patch.object(client.shutil,'which',return_value='/stub/tool'), patch.object(client,'pending_install',return_value=(pending,4)), patch.object(client,'install_local') as install, patch.object(client,'download') as download, patch.object(client.subprocess,'run') as run:
+                client.setup(['--install','--accept-spotify-terms'])
+                install.assert_called_once_with(pending)
+                download.assert_not_called()
+                run.assert_not_called()
+
+    def test_state_reports_waiting_install_for_newer_cached_local_revision(self):
+        with patch.object(client,'has_consent',return_value=True), patch.object(client,'pending_install',return_value=(Path('/fixture.rpm'),5)), patch.object(client,'installed_current',return_value=False):
+            self.assertEqual(client.package_state(),'install-wait')

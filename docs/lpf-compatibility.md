@@ -87,3 +87,14 @@ bootstrap helpers. It follows LPF's local-build architecture without requiring
 LPF's Fedora-specific framework on every target distribution. It does not copy
 the supplied specs into the distributed source package. The actual local target
 is named spotify-client-local; the public bootstrap and command remain spotify.
+
+
+## Actual LPF framework versus this standalone builder
+
+The underlying framework is [leamas/lpf](https://github.com/leamas/lpf), distinct
+from the RPM Fusion Spotify bootstrap referenced above. Its complete README was
+reviewed and concrete approval/version/retry gaps corrected. This project still
+uses its own standalone builder, as explicitly chosen by the owner. It does not
+use LPF's dedicated pkg-build account, lifecycle macros or notification daemon.
+See [the comparison and regression evidence](lpf-framework-audit.md) for the
+implemented behavior and the remaining architectural differences.

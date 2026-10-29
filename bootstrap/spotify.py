@@ -26,6 +26,70 @@ def consent_digest():
     return hashlib.sha256((HERE / 'eula.txt').read_bytes()).hexdigest()
 
 
+def approval_subject():
+    record = metadata(HERE / 'source.json')
+    release = str(record.get('PackagingRelease', 1))
+    if not re.fullmatch('[1-9][0-9]*', release):
+        raise ValueError('Invalid bootstrap packaging release')
+    return {'version': record['RPMVersion'], 'release': release, 'deb_sha256': record['SHA256']}
+
+
+def installed_current(minimum_release=None):
+    subject = approval_subject()
+    result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', 'spotify-client-local'], capture_output=True, text=True)
+    fields = result.stdout.splitlines()
+    if result.returncode or len(fields) != 2 or fields[0] != subject['version']:
+        return False
+    revision = re.fullmatch(r'([1-9][0-9]*)(?:[.].*)?', fields[1])
+    required = max(int(subject['release']), int(minimum_release or 1))
+    return bool(revision and int(revision[1]) >= required)
+
+
+def pending_install():
+    try:
+        subject = approval_subject()
+        folder = state_dir() / subject['version']
+        record = json.loads((folder / 'pending-install.json').read_text())
+        if record['package'] != subject:
+            return None
+        match = re.fullmatch(r'spotify-client-local-' + re.escape(subject['version']) + r'-([1-9][0-9]*)[.]x86_64[.]rpm', record['filename'])
+        if not match or int(match[1]) < int(subject['release']):
+            return None
+        path = folder / record['filename']
+        if path.is_symlink():
+            return None
+        verify(path, record)
+        result = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}\\n%{VERSION}\\n%{RELEASE}\\n', str(path)], capture_output=True, text=True)
+        if result.returncode or result.stdout.splitlines() != ['spotify-client-local', subject['version'], match[1]]:
+            return None
+        return path, int(match[1])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def remember_pending(path):
+    with path.open('rb') as stream:
+        digest = hashlib.sha256()
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    record = {'package': approval_subject(), 'filename': path.name,
+              'SHA256': digest.hexdigest(), 'Size': path.stat().st_size}
+    destination = path.parent / 'pending-install.json'
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        json.dump(record, stream)
+    os.replace(temporary, destination)
+
+
+def package_state():
+    if not has_consent():
+        return 'approve-wait'
+    pending = pending_install()
+    if pending and not installed_current(pending[1]):
+        return 'install-wait'
+    return 'OK' if installed_current() else 'build-wait'
+
+
 def revoke_local_client():
     # Never remove the user's existing LPF/vendor package or the RPM transaction's
     # bootstrap. Only this project's separately named local target is eligible.
@@ -48,22 +112,25 @@ def consent(args):
                                  '--filename=' + str(HERE / 'eula.txt'), '--width=760', '--height=600',
                                  '--checkbox=Bu bildirimi ve geçerli Spotify koşullarını okudum; yerel kurulumu istiyorum.'])
         accepted = result.returncode == 0
-        if not accepted:
+        if result.returncode == 1:
             revoke_local_client()
             raise SystemExit('Consent declined; download, build and launch cancelled.')
+        if not accepted:
+            raise SystemExit('Consent dialog failed; no rejection or package removal inferred. Retry spotify --setup.')
     if not accepted:
         raise SystemExit('Review the official terms, then run: spotify --setup --accept-spotify-terms')
     directory = state_dir()
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     path = directory / 'consent.json'
     with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as stream:
-        json.dump({'notice_sha256': consent_digest()}, stream)
+        json.dump({'notice_sha256': consent_digest(), 'package': approval_subject()}, stream)
 
 
 def has_consent():
     try:
-        return json.loads((state_dir() / 'consent.json').read_text()).get('notice_sha256') == consent_digest()
-    except (OSError, ValueError):
+        record = json.loads((state_dir() / 'consent.json').read_text())
+        return isinstance(record, dict) and record.get('notice_sha256') == consent_digest() and record.get('package') == approval_subject()
+    except (OSError, ValueError, KeyError):
         return False
 
 
@@ -183,6 +250,13 @@ def setup(args):
     import fcntl
     with (state / 'build.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        pending = pending_install()
+        if '--rebuild' not in args and pending:
+            install_local(pending[0])
+            return
+        if '--install' in args:
+            raise SystemExit('No verified pending RPM. Run spotify --setup to build it.')
+        (output / 'pending-install.json').unlink(missing_ok=True)
         existing = [int(m.group(1)) for p in output.glob('*.x86_64.rpm')
                     if (m := re.fullmatch(re.escape('spotify-client-local-' + version) + r'-([0-9]+)[.]x86_64[.]rpm', p.name))]
         release = max([int(record.get('PackagingRelease', 1)) - 1, *existing]) + 1
@@ -239,18 +313,21 @@ def setup(args):
             spec.write_text(target_spec(version, release, match.group(1)))
             options = ['--nodeps'] if Path('/etc/debian_version').exists() else []
             with (output / 'rpm-build.log').open('w') as log:
-                subprocess.run(['rpmbuild', '-bb', *options, '--define', f'_topdir {top}', '--define', 'dist %{nil}', '--define', '_binary_payload w3.zstdio', str(spec)], stdout=log, stderr=subprocess.STDOUT, check=True)
+                subprocess.run(['rpmbuild', '-bb', '--target', 'x86_64', *options, '--define', f'_topdir {top}', '--define', 'dist %{nil}', '--define', '_binary_payload w3.zstdio', str(spec)], stdout=log, stderr=subprocess.STDOUT, check=True)
             for rpm in (top / 'RPMS').rglob('*.rpm'):
                 dest = output / rpm.name
                 shutil.copy2(rpm, dest)
                 print('Local RPM:', dest)
                 print('Install after reviewing it: sudo dnf install ' + str(dest))
+                remember_pending(dest)
                 install_local(dest)
 
 
 def launch(args):
     if not has_consent():
         consent(args)
+    if not installed_current():
+        raise SystemExit('The local client is missing or outdated. Run spotify --setup to approve, build and install the selected version.')
     binary = Path('/usr/share/spotify-client/spotify')
     if not binary.is_file():
         raise SystemExit('Spotify is not built yet. Run spotify --setup to review the local-build instructions.')
@@ -289,8 +366,9 @@ def launch(args):
 
 if __name__ == '__main__':
     try:
-        if '--setup' in sys.argv[1:]: setup(sys.argv[1:])
-        elif '--help' in sys.argv[1:]: print('spotify [--setup --accept-spotify-terms] [--debug] [--safe-mode] [--gpu-mode=MODE] [URI]')
+        if any(option in sys.argv[1:] for option in ('--setup', '--install', '--rebuild')): setup(sys.argv[1:])
+        elif '--status' in sys.argv[1:]: print(package_state())
+        elif '--help' in sys.argv[1:]: print('spotify [--setup | --install | --rebuild] [--accept-spotify-terms] [--status] [--debug] [--safe-mode] [--gpu-mode=MODE] [URI]')
         else: launch(sys.argv[1:])
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         raise SystemExit('spotify: ' + str(exc))

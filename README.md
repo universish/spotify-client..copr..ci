@@ -228,3 +228,27 @@ the COPR/GitHub build release does not use this script.
 
 
 Translated with DeepL.com (free version)
+
+
+## Kurucu durum ve yeniden deneme / Installer state and retry
+
+```sh
+spotify --status
+spotify --install
+spotify --rebuild
+```
+
+`--status` onay, derleme veya kurulum bekleme durumunu gösterir. `--install`,
+daha önce hazırlanmış RPM'nin SHA256 ve paket kimliğini yeniden doğrulayarak
+kurulumu tekrar dener; yeniden DEB indirmez. `--rebuild` yeni tarama/derleme ister.
+Yeni kaynak sürümü veya paketleme revizyonu yeniden onay gerektirir.
+
+`--status` reports approval/build/install readiness. `--install` retries a
+previously built RPM after checking its hash and package identity; it does not
+repeat the DEB download. `--rebuild` requests a fresh scan/build. New source
+versions or bootstrap revisions need renewed approval.
+
+Bu bağımsız kurucu gerçek LPF motorunu kullanmaz. Ayrı pkg-build hesabı ve LPF
+bildirim servisi dahil mimari farklar [LPF karşılaştırmasında](docs/lpf-framework-audit.md)
+açıklanır. This standalone installer does not use the actual LPF framework;
+see the linked comparison for the account/lifecycle/notification differences.
