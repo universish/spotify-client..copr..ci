@@ -239,7 +239,7 @@ def setup(args):
             spec.write_text(target_spec(version, release, match.group(1)))
             options = ['--nodeps'] if Path('/etc/debian_version').exists() else []
             with (output / 'rpm-build.log').open('w') as log:
-                subprocess.run(['rpmbuild', '-bb', *options, '--define', f'_topdir {top}', '--define', 'dist %{nil}', str(spec)], stdout=log, stderr=subprocess.STDOUT, check=True)
+                subprocess.run(['rpmbuild', '-bb', *options, '--define', f'_topdir {top}', '--define', 'dist %{nil}', '--define', '_binary_payload w3.zstdio', str(spec)], stdout=log, stderr=subprocess.STDOUT, check=True)
             for rpm in (top / 'RPMS').rglob('*.rpm'):
                 dest = output / rpm.name
                 shutil.copy2(rpm, dest)
