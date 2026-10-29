@@ -22,6 +22,31 @@ ayrıca paket yöneticinizle kaldırılabilir.
 
 Aşağıda ayrıntılı topluluk bildirimi ve sorumluluk reddi bulunur.
 
+SPOTIFY LOCAL INSTALLATION — LEGAL NOTICE
+
+This is not a package approved by Spotify. The installer RPM does not contain the Spotify
+application. If you give your consent, the official DEB file will be downloaded to your computer,
+scanned, and built as a local RPM. System permissions are required for the final installation.
+
+You must read and comply with Spotify’s terms and conditions applicable to your country:
+https://www.spotify.com/tr-tr/legal/end-user-agreement/
+This notice does not replace Spotify’s terms and conditions; it does not grant a new Spotify license or
+permission to redistribute the client RPM. Do not share the local client RPM.
+
+Packaging tools are provided “as is,” to the extent permitted by law, without warranty.
+Scanning cannot rule out all unknown threats. Your use, account,
+backups, and compliance with the terms are your responsibility. This acknowledgment does not
+relieve the maintainer of their own liabilities; it does not constitute a waiver of your statutory rights.
+
+If you decline, the download, packaging, and execution will stop. If our spotify-client-local
+package is installed, system authorization is required for its removal. If
+authorization is not granted or the operation fails, the package may remain installed; the launcher will still not
+run it. Your existing LPF/vendor package will not be automatically removed. The small installer RPM
+can also be removed using your package manager.
+
+A detailed community notice and disclaimer are provided below.
+
+
 SPOTIFY CLIENT — THIRD-PARTY TERMS NOTICE
 
 This notice is maintained by an independent community packaging project.
