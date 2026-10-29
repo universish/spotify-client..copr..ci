@@ -110,3 +110,121 @@ Kurucu kaynak arşivi açık dosya listesiyle oluşturulur; eski çatala ait
 lisansı belirsiz üreticiler ve Spotify verileri bu arşive alınmaz.
 `src/build_once.sh` eski doğrudan istemci üretimini yalnız yerel karşılaştırmalar
 için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.
+
+----
+
+# Spotify Local RPM Installer — universish
+
+**Please read before downloading and installing:** The GitHub/COPR RPM is a small community-maintained
+installer. It does not include the Spotify app, logo, or proprietary binaries.
+The Spotify client is downloaded from the official DEB on **your own computer** after your approval,
+scanned, and packaged as a local RPM. This is not a project supported
+or endorsed by Spotify.
+
+[Legal notice and terms](eula.txt), [disclaimer](DISCLAIMER.txt),
+[license scope](LICENSE), and [copyright/attributions](COPYRIGHT) must be read before downloading.
+You must comply with Spotify’s [terms applicable to your country](https://www.spotify.com/legal/end-user-agreement/).
+Approval does not transfer all legal liability to the user; it does not waive mandatory rights
+or eliminate the maintainer’s own obligations. These documents do not grant permission to
+RPMs. Do not share the local client RPM.
+
+## Installation and Acceptance
+
+The installer can be downloaded from GitHub Releases and installed using the package manager:
+
+```sh
+sudo dnf install ./spotify-*.x86_64.rpm
+spotify --setup
+```
+
+To install the installer published via COPR:
+
+```sh
+sudo dnf copr enable universish/Spotify..Client
+sudo dnf install spotify
+spotify --setup
+```
+
+In a graphical session, a Zenity window opens displaying the legal text and a checkbox.
+If you agree, the DEB file is downloaded, verified, and scanned; the local `spotify-client-local`
+RPM is built. The package manager then opens with system privileges.
+Administrator privileges are used only for the final installation/uninstallation process.
+
+If you decline, the download, build, and execution will stop. If our `spotify-client-local`
+package is already installed, system authorization is requested for its removal.
+If authorization is not granted or the removal fails, it is not assumed to have been automatically deleted;
+this launcher will again refuse to run. Existing LPF/vendor packages are not automatically
+removed. You can remove the small installer RPM separately using your package manager.
+
+No graphical confirmation is requested during the DNF/RPM process: the installer can be installed, **but confirmation for the actual Spotify
+client comes in the next step**. If the terms of service change, confirmation
+will be requested again. The confirmation record is user-specific. A user without a graphical session can
+run `spotify --setup --accept-spotify-terms` explicitly after reviewing the text.
+
+```sh
+spotify
+spotify --debug
+spotify --safe-mode
+spotify --gpu-mode=native
+```
+
+## Local Client Build
+
+1. The size and SHA256 value of the selected official amd64 DEB are verified.
+2. ClamAV signatures are updated; if an error occurs, the process stops.
+3. The DEB and check files are extracted; Debian installation scripts are not run.
+4. The DEB and all extracted contents are scanned using standard malware and heuristic signatures.
+5. A separate PUA scan is performed. Only `PUA.*` detections are reported, and the process continues;
+   standard malware, scanning errors, encrypted/corrupted content, or exceeding the limit will halt the process.
+6. The application tree, such as LPF, is kept intact under `/usr/share/spotify-client/`.
+   The RPM `%check` phase re-verifies the SHA256 values of the original files.
+7. A local RPM is created, and installation with system privileges is requested.
+
+Reports are located under `${XDG_STATE_HOME:-$HOME/.local/state}/spotify-bootstrap/<version>/`.
+Scanning does not guarantee the absence of all unknown threats. Approval, download, and scanning
+are performed with user permission; the installer’s RPM scriptlets do not download or run Spotify.
+
+The NVIDIA desktop GL profile tracks active LPF settings; PRIME is applied
+on supported hybrid GPUs. NVIDIA variables are not added to AMD/Intel/Nouveau. In the event of an early graphics
+error, there is limited ANGLE/software fallback. Ozone/DPI is not forced.
+User `spotify-flags.conf` and `spotify.env` files are preserved; the environment file
+is not executed as shell code. [GPU details](docs/gpu-launcher.md).
+
+## Automation
+
+The build pipeline now produces only **installer RPMs/SRPMs that do not contain proprietary content**.
+It checks for the stable release daily at 12:00 and 17:00 Stockholm time; if no new release
+is available, it skips the build. Manual triggering also repackages the same release.
+New releases are numbered `-1`, while subsequent releases of the same version are numbered `-2`, `-3`.
+The source RPM is scanned; the COPR result is awaited, and then a GitHub release is created.
+The Spotify DEB scan is a mandatory step in the user’s local build process.
+
+In the metadata, `download.spotify.com/debian` is used first, followed by `repository.spotify.com`.
+The default remains only stable x86_64; there is no ARM/32-bit version.
+The difference between LPF source 1.3.4 and the official stable 1.2.95 is explained [in the LPF documentation](docs/lpf-compatibility.md);
+testing is not automatically selected.
+
+The `COPR_CONFIG` secret setting and active distribution selection are [in the COPR documentation](docs/copr.md).
+It has been ported to the main build model. The first verified build release
+is [`1.2.95.453.g0eeebbed-4`](https://github.com/universish/spotify-client..copr..ci/releases/tag/v1.2.95.453.g0eeebbed-4)
+; it has been successfully built on 17 targets in COPR. Old direct client RPM/SRPM
+and Actions package copies have been removed, while version tags have been preserved.
+Nginx, Docker Hub, GHCR, or telemetry are not used. Download charts show GitHub
+Releases counters; they do not show the number of active users.
+
+## Development
+
+```sh
+python3 -m unittest discover -s tests -v
+SPOTIFY_METADATA_DIR=output/metadata python3 src/parser_debian_control_file.py stable spotify-client Version
+python3 tools/build_bootstrap.py output/metadata/spotify-client.stable.json output
+src/build_binary.sh output/spotify-*.src.rpm output
+```
+
+The build source archive is created using an open file list;
+producers with unclear licenses from the old fork and Spotify data are not included in this archive.
+`src/build_once.sh` preserves the old direct client build solely for local comparisons;
+the COPR/GitHub build release does not use this script.
+
+
+Translated with DeepL.com (free version)
