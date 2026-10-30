@@ -171,11 +171,19 @@ The preserved license manifest still passed all 23 file digests and both
 OpenSSL timestamp checks. The unused inherited logo SVG was removed from the
 current source tree; Git history was not rewritten.
 
-### Remaining legacy-host cleanup
+### Completed legacy-host cleanup
 
-The new workflow creates no GitHub Release or RPM artifact. The legacy -2,
--3 and -4 Release records and the payload-free RPM artifact 12917461854 from
-run 40919031213 still require confirmed deletion and an absence check. They
-must not be described as removed until the remote state proves it. The older
-proprietary release assets and two proprietary Actions ZIP artifacts had
-already been removed, as recorded in the historical validation above.
+After explicit confirmation, the -2, -3 and -4 Release records were deleted.
+All three REST DELETE operations returned 204; an authenticated follow-up
+Releases list returned an empty list, and the web page displayed that there
+were no releases. The old payload-free RPM artifact 12917461854 from run
+40919031213 was deleted through the authenticated web interface; the success
+notice was visible, the artifact endpoint returned 404, and the repository
+artifact list no longer contained any RPM archives. New scan/report artifact
+12986083420 remained available. Git tags and COPR packages were preserved.
+The older proprietary release assets and two proprietary Actions ZIP artifacts
+had already been removed, as recorded in the historical validation above.
+
+This verifies repository-controlled Releases assets and Actions artifacts; it
+does not claim erasure of other people’s downloads or provider backups. The
+new workflow creates neither GitHub Releases nor RPM artifact archives.

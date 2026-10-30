@@ -11,9 +11,9 @@ This project is not affiliated with, approved by or supported by Spotify. COPR
 hosting does not make it an official Fedora or Red Hat package. The choice of a
 new project name is not a claim of completed trademark clearance.
 
-This document describes the implemented source transition. It does not certify
-that the new package is already available in COPR; remote publication and cleanup
-results must be checked in the validation record. The earlier `spotify` RPM
+The current Sonicradle bootstrap was delivered by COPR build 11231606 and
+verified against its Actions provenance. The validation record contains the
+package, scan and legacy-host cleanup evidence. The earlier `spotify` RPM
 does not contain the new `sonicradle` command.
 
 ## Why this fork changed
@@ -87,8 +87,8 @@ prevent concurrent or interrupted attempts from reusing a number.
 
 The CI runner temporarily downloads the selected official DEBs, verifies and
 extracts them, updates ClamAV and scans the DEBs and unpacked content. A source-
-hash-bound scan record is included in the bootstrap. It constructs and scans
-the payload-free source RPM, submits only that RPM directly to COPR and waits
+hash-bound scan record is included in the bootstrap. It constructs the payload-free source RPM using an explicit free-helper
+allowlist, submits only that RPM directly to COPR and waits
 for the build result. The DEB and extracted application are never uploaded or
 retained as Actions artifacts. No RPM is published in GitHub Releases.
 Temporary packages and credentials are removed on runner exit; GitHub manages
