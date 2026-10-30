@@ -5,11 +5,11 @@ source_rpm=${1:?Usage: submit_copr.sh SOURCE_RPM OUTPUT_DIRECTORY}
 output=${2:-output}
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 : "${COPR_CONFIG:?COPR_CONFIG repository secret is required for automatic submission}"
-: "${SPOTIFY_VERSION:?Expected Spotify version is required}"
-: "${SPOTIFY_RELEASE:?Reserved packaging number is required}"
-[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "spotify $SPOTIFY_VERSION-$SPOTIFY_RELEASE" ]]
+: "${SONICRADLE_VERSION:?Expected bootstrap version is required}"
+: "${SONICRADLE_RELEASE:?Reserved packaging number is required}"
+[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "sonicradle $SONICRADLE_VERSION-$SONICRADLE_RELEASE" ]]
 mkdir -p "$output"
-work=$(mktemp -d "${TMPDIR:-/tmp}/spotify-copr.XXXXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/sonicradle-copr.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 umask 077
 printf '%s\n' "$COPR_CONFIG" > "$work/copr.conf"

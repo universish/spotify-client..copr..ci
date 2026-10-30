@@ -24,9 +24,9 @@ installed target with the bootstrap version. Our approval was only bound to
 the notice text. It is now also bound to the selected DEB hash, version and
 packaging revision. A new package cannot inherit an old package's approval.
 
-The launcher now checks the installed spotify-client-local version and revision.
+The launcher now checks the installed sonicradle-client-local version and revision.
 A missing/outdated target is reported instead of running it as the current
-client. `spotify --status` exposes approve-wait, build-wait, install-wait or OK. These are a
+client. `sonicradle --status` exposes approve-wait, build-wait, install-wait or OK. These are a
 small standalone status interface, not the framework's full state machine.
 
 A dialog process error was previously treated as user rejection. Only the
@@ -37,9 +37,9 @@ the removal behavior requested by this repository's owner.
 ## Remaining architectural differences
 
 A completed local RPM is retained with its digest, size, package context and
-RPM identity. `spotify --install` retries only that verified artifact; it never
-starts an unapproved download/build. `spotify --setup` can also resume it;
-`spotify --rebuild` explicitly requests a fresh scan/build. Missing, changed or
+RPM identity. `sonicradle --install` retries only that verified artifact; it never
+starts an unapproved download/build. `sonicradle --setup` can also resume it;
+`sonicradle --rebuild` explicitly requests a fresh verified local build. Missing, changed or
 wrong-context cache files cannot be installed through this retry path.
 
 The real framework uses a dedicated pkg-build account/group, its own installed
@@ -60,3 +60,16 @@ The upstream README warns that its system tests can remove installed LPF
 packages. Those tests were not run on this computer. Regression checks use
 synthetic data and mocked privileged operations; the working LPF installation,
 user configuration and previous signed evidence are preserved.
+
+## Sonicradle update to the original comparison
+
+Current package/command names are `sonicradle` and `sonicradle-client-local`.
+Stable and testing share one local target. Setup/update defaults to stable;
+`-unstable` explicitly selects testing. Original LPF package names above in
+source references identify those upstream projects rather than the new command.
+
+Scanning now happens exclusively in the GitHub Actions VM. The free bootstrap
+carries the selected source hash and CI scan record. The user's computer
+downloads and verifies the same DEB, then packages it locally; it neither
+installs nor runs ClamAV. Earlier validation notes about local scanning record
+the previous implementation, not the current host behavior.

@@ -1,32 +1,22 @@
 # Download and usage statistics
 
-Requested Developer dashboard:
-https://developer.spotify.com/dashboard/4b833db4e6454636b2d2aea2852385d5
+The owner originally supplied a Spotify Developer dashboard URL. That dashboard
+counts activity for applications using Spotify's APIs/SDKs; repackaging the
+native desktop application does not make it use this project's Client ID.
+Sonicradle adds no OAuth flow, API traffic or usage telemetry.
 
-A Spotify Developer application identifies calls made through the Spotify Web API
-or SDKs. Repackaging the official desktop executable does not make it use that
-application's Client ID. The official executable uses Spotify's own login and
-application identity. An RPM cannot register downloads or desktop usage in this
-Developer dashboard by adding its URL or Client ID. No API feature was requested,
-so this fork introduces no OAuth flow, secret, token or synthetic API traffic.
+[Spotify application concepts](https://developer.spotify.com/documentation/web-api/concepts/apps)
+explain the developer-app identity. No developer API or VirusTotal credential is
+needed by the current package workflow. COPR submission uses `COPR_CONFIG`.
 
-Reference: https://developer.spotify.com/documentation/web-api/concepts/apps
+`tools/download_stats.py` is a legacy report utility for GitHub release-asset
+`download_count` values. It can render a saved JSON snapshot, but the current
+policy does not publish new GitHub Release RPMs. Removing historical assets or
+releases removes their live counters. The tool must not be presented as a
+current client-usage or combined GitHub/COPR measurement.
 
-`tools/download_stats.py` uses GitHub's documented release asset `download_count`
-and generates an HTML table/bar chart plus its input JSON snapshot. It follows
-pagination so old release downloads are included. `GH_TOKEN` is optional for
-public repositories and is sent only to api.github.com. `--input FILE` renders an
-already saved releases JSON response without networking.
-
-Reference: https://docs.github.com/en/rest/releases/assets
-
-The counters count file downloads, including repeats and source RPMs. They are
-not install counts or unique/active users. COPR downloads are counted separately
-on the COPR project's release table; self-hosted repositories can use their web
-server's access logs. The report links to COPR rather than inventing a combined
-counter. GitHub download counters are lost when assets/releases are deleted or
-replaced, so automatic removal of old releases has been removed from this fork.
-
-Active usage would require a separately designed, consent-based telemetry system
-or application changes. It cannot be inferred accurately from package downloads.
-The packaged launcher sends no usage statistics.
+COPR's repository-download figures are separate. Downloads can include repeats,
+metadata or files fetched without an installation; they are not unique users,
+installs or active listeners. No combined total is invented. Active usage would
+require a separate, informed telemetry design; this project does not implement
+one.

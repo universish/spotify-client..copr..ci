@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('bootstrap_client', ROOT / 'bootstrap/spotify.py')
+spec = importlib.util.spec_from_file_location('bootstrap_client', ROOT / 'bootstrap/sonicradle.py')
 client = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client)
 
@@ -42,7 +42,7 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cached, output = Path(tmp) / 'cached.deb', Path(tmp) / 'download.deb'
             cached.write_bytes(b'tampered')
-            with patch.dict(os.environ, SPOTIFY_DEB_FILE=str(cached)), patch.object(client, 'urlopen') as network:
+            with patch.dict(os.environ, SONICRADLE_DEB_FILE=str(cached)), patch.object(client, 'urlopen') as network:
                 with self.assertRaisesRegex(ValueError, 'mismatch'):
                     client.download(self.record(), output)
                 network.assert_not_called()
@@ -59,9 +59,10 @@ class BootstrapTests(unittest.TestCase):
 
     def test_local_spec_keeps_integrity_and_runtime_dependencies(self):
         text = client.target_spec('1.2.3', 4, '2.39')
-        self.assertIn('Name: spotify-client-local', text)
+        self.assertIn('Name: sonicradle-client-local', text)
         self.assertIn('Release: 4', text)
-        self.assertIn('Requires: spotify', text)
+        self.assertIn('Requires: sonicradle', text)
+        self.assertIn('__provides_exclude_from ^%{_datadir}/sonicradle-client/', text)
         self.assertIn('Requires: glibc >= 2.39', text)
         self.assertIn('sha256sum --quiet -c .vendor-files.sha256', text)
         self.assertNotIn('%post\n', text)
@@ -77,7 +78,7 @@ class BootstrapTests(unittest.TestCase):
             with patch.object(client, 'HERE', path), patch.object(client, 'state_dir', return_value=path), patch.dict(os.environ, DISPLAY=':test'), patch.object(client.shutil, 'which', side_effect=lambda name: '/usr/bin/' + name), patch.object(client.subprocess, 'run', side_effect=calls) as run:
                 with self.assertRaisesRegex(SystemExit, 'Consent declined'):
                     client.consent([])
-                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'spotify-client-local'])
+                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'sonicradle-client-local'])
                 self.assertFalse((path / 'consent.json').exists())
 
     def test_failed_removal_does_not_keep_a_prior_acceptance(self):
@@ -131,7 +132,7 @@ class BootstrapTests(unittest.TestCase):
     def test_installed_client_requires_correct_version_and_at_least_bootstrap_revision(self):
         from types import SimpleNamespace
         expected = {'version':'1.2.3','release':'4','deb_sha256':'0'*64}
-        with patch.object(client, 'approval_subject', return_value=expected):
+        with patch.object(client, 'approval_subject', return_value=expected), patch.object(client, 'installed_source', return_value={'Channel':'stable', 'SHA256':'0'*64}):
             for version, release, result in [('1.2.2','9',False), ('1.2.3','3',False), ('1.2.3','4',True), ('1.2.3','5.fc44',True)]:
                 with self.subTest(version=version,release=release), patch.object(client.subprocess, 'run', return_value=SimpleNamespace(returncode=0,stdout=version+'\n'+release+'\n')):
                     self.assertEqual(client.installed_current(),result)
@@ -156,9 +157,9 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             folder=root/'1.2.3';folder.mkdir()
-            rpm=folder/'spotify-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
+            rpm=folder/'sonicradle-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
             subject={'version':'1.2.3','release':'4','deb_sha256':'1'*64}
-            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='spotify-client-local\n1.2.3\n4\n')):
+            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='sonicradle-client-local\n1.2.3\n4\n')):
                 client.remember_pending(rpm)
                 self.assertEqual(client.pending_install(),(rpm,4))
                 rpm.write_bytes(b'changed-after-build')
@@ -175,7 +176,7 @@ class BootstrapTests(unittest.TestCase):
     def test_install_retry_does_not_repeat_download_scan_or_build(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);pending=root/'ready.rpm'
-            with patch.object(os,'geteuid',return_value=1000), patch.object(client,'consent'), patch.object(client,'metadata',return_value={'RPMVersion':'1.2.3'}), patch.object(client,'state_dir',return_value=root), patch.object(client.shutil,'which',return_value='/stub/tool'), patch.object(client,'pending_install',return_value=(pending,4)), patch.object(client,'install_local') as install, patch.object(client,'download') as download, patch.object(client.subprocess,'run') as run:
+            with patch.object(os,'geteuid',return_value=1000), patch.object(client,'consent'), patch.object(client,'metadata',return_value={'RPMVersion':'1.2.3'}), patch.object(client,'validate_scan'), patch.object(client,'state_dir',return_value=root), patch.object(client.shutil,'which',return_value='/stub/tool'), patch.object(client,'pending_install',return_value=(pending,4)), patch.object(client,'installed_current',return_value=False), patch.object(client,'install_local') as install, patch.object(client,'download') as download, patch.object(client.subprocess,'run') as run:
                 client.setup(['--install','--accept-spotify-terms'])
                 install.assert_called_once_with(pending)
                 download.assert_not_called()
@@ -184,3 +185,95 @@ class BootstrapTests(unittest.TestCase):
     def test_state_reports_waiting_install_for_newer_cached_local_revision(self):
         with patch.object(client,'has_consent',return_value=True), patch.object(client,'pending_install',return_value=(Path('/fixture.rpm'),5)), patch.object(client,'installed_current',return_value=False):
             self.assertEqual(client.package_state(),'install-wait')
+
+
+class ChannelAndCIScanTests(unittest.TestCase):
+    def setUp(self):
+        self.previous_channel = client.CURRENT_CHANNEL
+        client.CURRENT_CHANNEL = 'stable'
+
+    def tearDown(self):
+        client.CURRENT_CHANNEL = self.previous_channel
+
+    def record(self, channel, version='1.2.3'):
+        return dict(Package='spotify-client', Architecture='amd64', RPMVersion=version,
+                    Channel=channel, Filename=f'pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb',
+                    SHA256='a'*64, Size=10)
+
+    def test_default_and_explicit_unstable_select_one_channel(self):
+        self.assertEqual(client.channel_option(['--setup']), 'stable')
+        self.assertEqual(client.channel_option(['--update']), 'stable')
+        self.assertEqual(client.channel_option(['--setup', '-unstable']), 'unstable')
+        self.assertEqual(client.channel_option(['--update', '-unstable']), 'unstable')
+
+    def test_catalog_never_promotes_unstable_record_into_stable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'source.json'
+            catalog={'stable':self.record('stable'), 'unstable':self.record('unstable','1.3.4')}
+            path.write_text(json.dumps(catalog))
+            self.assertEqual(client.metadata(path)['RPMVersion'], '1.2.3')
+            self.assertEqual(client.metadata(path, 'unstable')['RPMVersion'], '1.3.4')
+            catalog['stable']=catalog['unstable'];path.write_text(json.dumps(catalog))
+            with self.assertRaisesRegex(ValueError, 'requested channel'):
+                client.metadata(path)
+
+    def test_successful_scan_evidence_must_match_download_hash(self):
+        record=self.record('stable')
+        with self.assertRaisesRegex(ValueError, 'CI scan evidence'):
+            client.validate_scan(record)
+        record['ScanAttestation']={'SHA256':'a'*64, 'Malware':'clean','PUA':'advisory',
+            'RunURL':'https://github.com/universish/spotify-client..copr..ci/actions/runs/123',
+            'ScannedAt':'2026-10-30T00:00:00+00:00', 'Scanner':'ClamAV','DatabaseVersion':'ClamAV 1.4/123/Oct30'}
+        client.validate_scan(record)
+        for field,value in [('SHA256','b'*64),('Malware','infected'),('PUA','blocked'),('RunURL','https://untrusted.invalid/run')]:
+            original=record['ScanAttestation'][field]
+            record['ScanAttestation'][field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):
+                client.validate_scan(record)
+            record['ScanAttestation'][field]=original
+
+    def test_channels_replace_one_identically_named_local_rpm(self):
+        stable=client.target_spec('1.2.3',1,'2.39')
+        unstable=client.target_spec('1.3.4',1,'2.39')
+        for spec in (stable,unstable):
+            self.assertIn('Name: sonicradle-client-local\n',spec)
+            self.assertNotIn('Name: sonicradle-client-local-unstable',spec)
+            self.assertNotIn('Provides: spotify-client',spec)
+
+    def test_local_setup_contains_no_clamav_install_or_scan(self):
+        import inspect
+        source=inspect.getsource(client.setup)
+        self.assertNotIn('freshclam',source)
+        self.assertNotIn('clamscan',source)
+        self.assertNotIn('scan_payload',source)
+        self.assertIn('validate_scan(record)',source)
+
+
+class LocalTransactionTests(unittest.TestCase):
+    def test_downgrade_and_upgrade_use_native_rpm_ordering(self):
+        from types import SimpleNamespace
+        for comparison, expected in [('-1', 'downgrade'),('1','install'),('0','reinstall')]:
+            results=[SimpleNamespace(stdout='sonicradle-client-local\n1.2.95-1\n'),
+                     SimpleNamespace(returncode=0,stdout='1.3.4-1'),SimpleNamespace(stdout=comparison)]
+            with self.subTest(comparison=comparison),patch.object(client.subprocess,'run',side_effect=results):
+                self.assertEqual(client.transaction_action(Path('/client.rpm')),expected)
+
+    def test_dnf_channel_downgrade_is_explicit(self):
+        with patch.object(client,'ensure_client_closed'),patch.object(client,'transaction_action',return_value='downgrade'),patch.object(client.shutil,'which',side_effect=lambda tool:'/usr/bin/'+tool),patch.object(client.subprocess,'run') as run:
+            client.install_local(Path('/client.rpm'))
+            run.assert_called_once_with(['pkexec','/usr/bin/dnf','downgrade','-y','/client.rpm'],check=True)
+
+
+class RunningAndPendingTests(unittest.TestCase):
+    def test_current_cached_rpm_does_not_reinstall(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with patch.object(os,'geteuid',return_value=1000),patch.object(client,'consent'),patch.object(client,'metadata',return_value={'RPMVersion':'1.2.3'}),patch.object(client,'validate_scan'),patch.object(client,'state_dir',return_value=root),patch.object(client.shutil,'which',return_value='/stub/tool'),patch.object(client,'pending_install',return_value=(root/'ready.rpm',4)),patch.object(client,'installed_current',return_value=True),patch.object(client,'install_local') as install,patch.object(client,'download') as download:
+                client.setup(['--update'])
+                install.assert_not_called()
+                download.assert_not_called()
+
+    def test_running_client_prevents_replacement(self):
+        with patch.object(client.Path,'glob',return_value=[Path('/proc/123/exe')]),patch.object(client.os,'readlink',return_value='/usr/share/sonicradle-client/spotify (deleted)'):
+            with self.assertRaisesRegex(SystemExit,'Close all'):
+                client.ensure_client_closed()

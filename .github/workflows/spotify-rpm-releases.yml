@@ -1,4 +1,4 @@
-name: Stable Spotify bootstrap RPMs and COPR
+name: Sonicradle channels and COPR
 
 on:
   schedule:
@@ -9,174 +9,78 @@ on:
 permissions:
   contents: read
 
-# One counter reservation/build/delivery at a time, including manual invocations.
+# Atomic metadata tags reserve revisions. No GitHub Release is created.
 concurrency:
-  group: spotify-stable-release
+  group: sonicradle-copr-release
   cancel-in-progress: false
 
 jobs:
-  detect:
+  package:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 150
+    env:
+      TMPDIR: ${{ runner.temp }}
     permissions:
       contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      release: ${{ steps.version.outputs.release }}
-      tag: ${{ steps.version.outputs.tag }}
-      needed: ${{ steps.version.outputs.needed }}
     steps:
       - uses: actions/checkout@v7
-      - name: Check stable DEB version and reserve packaging number
+      - name: Detect both channels and reserve a packaging revision
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
-          SPOTIFY_METADATA_DIR: ${{ runner.temp }}/spotify-metadata
+          SONICRADLE_METADATA_DIR: ${{ runner.temp }}/sonicradle-metadata
         run: python3 tools/plan_release.py --event "$GITHUB_EVENT_NAME"
-      - uses: actions/upload-artifact@v7
+      - name: Install packaging, scanning and COPR tools
         if: steps.version.outputs.needed == 'true'
-        with:
-          name: spotify-stable-source-metadata
-          path: ${{ runner.temp }}/spotify-metadata/spotify-client.stable.json
-
-  build:
-    needs: detect
-    if: needs.detect.outputs.needed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    env:
-      SPOTIFY_RELEASE: ${{ needs.detect.outputs.release }}
-      SPOTIFY_VERSION: ${{ needs.detect.outputs.version }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: spotify-stable-source-metadata
-          path: metadata
-      - name: Install packaging and scanning tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 binutils desktop-file-utils
+          sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils
+          python3 -m venv "$RUNNER_TEMP/sonicradle-copr-venv"
+          "$RUNNER_TEMP/sonicradle-copr-venv/bin/pip" install copr-cli
+          echo "$RUNNER_TEMP/sonicradle-copr-venv/bin" >> "$GITHUB_PATH"
       - name: Run regression tests
+        if: steps.version.outputs.needed == 'true'
         run: python3 -m unittest discover -s tests -v
-      - name: Build payload-free bootstrap source RPM and scan it
+      - name: Download, verify, extract and scan upstream DEBs in this runner
+        if: steps.version.outputs.needed == 'true'
+        run: python3 tools/scan_sources.py "$RUNNER_TEMP/sonicradle-metadata/source.json" output/scan-reports
+      - name: Build payload-free bootstrap RPMs
+        if: steps.version.outputs.needed == 'true'
         env:
-          SCAN_REPORT_DIR: ${{ github.workspace }}/output/scan-reports
+          SONICRADLE_VERSION: ${{ steps.version.outputs.version }}
+          SONICRADLE_RELEASE: ${{ steps.version.outputs.release }}
         run: |
-          python3 tools/build_bootstrap.py metadata/spotify-client.stable.json output
-          src/scan_payload.sh --update
-          src/scan_payload.sh --scan output/spotify-*.src.rpm
-      - name: Build and check versioned x86_64 RPM
-        run: |
-          src/build_binary.sh output/spotify-*.src.rpm output
-          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/spotify-*.x86_64.rpm)" = "spotify $SPOTIFY_VERSION-$SPOTIFY_RELEASE x86_64"
-          cd output
-          sha256sum spotify-*.rpm > SHA256SUMS
-      - name: Save RPMs
-        uses: actions/upload-artifact@v7
-        with:
-          name: spotify-stable-rpms
-          path: |
-            output/*.rpm
-            output/SHA256SUMS
-          compression-level: 0
-          if-no-files-found: error
-      - name: Save scan and build evidence
+          python3 tools/build_bootstrap.py "$RUNNER_TEMP/sonicradle-metadata/source.json" output
+          src/build_binary.sh output/sonicradle-*.src.rpm output
+          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/sonicradle-*.x86_64.rpm)" = "sonicradle $SONICRADLE_VERSION-$SONICRADLE_RELEASE x86_64"
+          sha256sum output/sonicradle-*.rpm > output/SHA256SUMS
+      - name: Submit source RPM to enabled COPR targets and wait
+        if: steps.version.outputs.needed == 'true'
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+          SONICRADLE_VERSION: ${{ steps.version.outputs.version }}
+          SONICRADLE_RELEASE: ${{ steps.version.outputs.release }}
+        run: bash tools/submit_copr.sh output/sonicradle-*.src.rpm output
+      - name: Remove transient RPMs, source downloads and build environments
         if: always()
+        shell: bash
+        run: |
+          find output -type f \( -name '*.rpm' -o -name '*.deb' \) -delete 2>/dev/null || true
+          rm -rf -- "$RUNNER_TEMP"/sonicradle-ci-scan-* "$RUNNER_TEMP"/sonicradle-bootstrap-* "$RUNNER_TEMP"/sonicradle-copr.* "$RUNNER_TEMP"/sonicradle-copr-* "$RUNNER_TEMP"/sonicradle-copr-venv "$RUNNER_TEMP"/spotify-rpm.*
+          # GitHub tears down this hosted runner VM after the job. This workflow
+          # cannot reset the underlying provider VM itself.
+      - name: Retain reports and pinned metadata only
+        if: always() && steps.version.outputs.needed == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: spotify-stable-validation
+          name: sonicradle-validation
+          retention-days: 14
+          if-no-files-found: warn
           path: |
             output/scan-reports/
             output/rpm-build.log
-
-  copr:
-    needs: [detect, build]
-    if: needs.detect.outputs.needed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    env:
-      SPOTIFY_VERSION: ${{ needs.detect.outputs.version }}
-      SPOTIFY_RELEASE: ${{ needs.detect.outputs.release }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: spotify-stable-rpms
-          path: assets
-      - name: Install COPR client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm python3-venv
-          python3 -m venv "$RUNNER_TEMP/copr-venv"
-          "$RUNNER_TEMP/copr-venv/bin/pip" install copr-cli
-          echo "$RUNNER_TEMP/copr-venv/bin" >> "$GITHUB_PATH"
-      - name: Submit to enabled compatible COPR distributions and wait
-        env:
-          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
-        run: bash tools/submit_copr.sh assets/spotify-*.src.rpm output
-      - name: Save COPR submission evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: spotify-copr-validation
-          path: output/
-
-  publish:
-    needs: [detect, build, copr]
-    if: needs.detect.outputs.needed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: spotify-stable-rpms
-          path: assets
-      - name: Publish a separate stable release for this packaging number
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.detect.outputs.tag }}
-          VERSION: ${{ needs.detect.outputs.version }}
-          PACKAGING_RELEASE: ${{ needs.detect.outputs.release }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          Community bootstrap for the official stable Spotify client on x86_64 Linux.
-          These RPMs and SRPMs contain only packaging helpers and pinned source metadata.
-          No Spotify binaries, icons or proprietary application resources are included.
-          The bootstrap source was scanned with updated ClamAV signatures before delivery.
-
-          Install the bootstrap with `sudo dnf install ./spotify-*.x86_64.rpm`.
-          Run `spotify --setup`, read the terms, then explicitly request the local build.
-          The official DEB is downloaded, SHA256-verified and scanned on your computer.
-          Normal malware, heuristic findings and scan errors block the local client build.
-          PUA-only detections are reported separately. Install the resulting local RPM
-          using the printed command; then start the client with `spotify`.
-          Spotify is proprietary. This community project is not endorsed by Spotify.
-          The local client RPM is not for redistribution.
-          Bootstrap RPMs are unsigned; SHA256SUMS provides integrity checks only.
-          Build, scan and COPR logs are available in workflow artifacts.
-          NOTES
-          # The tag was atomically reserved before scanning; never move/reuse it.
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
-              --draft --title "Spotify $VERSION-$PACKAGING_RELEASE" --notes-file "$RUNNER_TEMP/release-notes.md"
-          fi
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" assets/* --clobber
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest \
-            --title "Spotify $VERSION-$PACKAGING_RELEASE" --notes-file "$RUNNER_TEMP/release-notes.md"
-      - name: Generate download graph
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 tools/download_stats.py
-      - uses: actions/upload-artifact@v7
-        with:
-          name: spotify-download-statistics
-          path: |
-            output/download-stats.html
-            output/download-stats.json
+            output/SHA256SUMS
+            output/copr-targets.txt
+            output/copr-submit.log
+            ${{ runner.temp }}/sonicradle-metadata/source.json

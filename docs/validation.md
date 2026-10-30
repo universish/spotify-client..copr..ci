@@ -1,3 +1,9 @@
+> Historical validation record. Dates, former package names, scans and public
+> releases below describe the implementation that existed at that time. They
+> are not current install instructions or evidence that the Sonicradle transition
+> is published. Current behavior is documented in `release-flow.md`; ClamAV now
+> runs in Actions only. New remote results should be appended after verification.
+
 # Validation evidence — 2026-10-27
 
 The official stable `spotify-client_1.2.95.453.g0eeebbed_amd64.deb` was downloaded

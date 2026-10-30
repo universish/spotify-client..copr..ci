@@ -1,12 +1,12 @@
-The payload-free bootstrap uses `bootstrap/spotify.py` and the same GPU helper
-installed under `/usr/share/spotify-bootstrap/spotify-gpu.sh`. The placement
-examples below describe the legacy local reference generator, not COPR's new
-bootstrap source. GPU selection and bounded fallback behavior are shared.
+The payload-free bootstrap uses `bootstrap/sonicradle.py` and the same GPU helper
+installed under `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. The bootstrap generates its local target separately. GPU selection and bounded
+fallback behavior are shared with the historical reference implementation.
 
 # Adaptive GPU launcher and RPM integration
 
-`/usr/bin/spotify` reads the user's existing environment/flags files and delegates
-to `/usr/share/spotify-client/spotify-gpu.sh`. Selection happens in the user's session
+`/usr/bin/sonicradle` reads `~/.config/sonicradle/environment.conf` and
+`~/.config/sonicradle/flags.conf` and delegates
+to `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. Selection happens in the user's session
 on every launch. Root installation scripts do not probe a display or write a
 hardware-specific launcher, and no system-wide GPU configuration is changed.
 
@@ -39,14 +39,14 @@ Actual video acceleration depends on the driver, codecs and Spotify/CEF build;
 requesting these features does not install a VA-API driver or prove support.
 
 Explicit user `--use-gl`, `--use-angle` or GPU-disable flags take precedence over
-automatic selection. `SPOTIFY_GPU_MODE` can be set in the process environment or
-spotify.env; a wrapper `--gpu-mode=` option has higher priority.
+automatic selection. `SONICRADLE_GPU_MODE` can be set in the process environment or
+`~/.config/sonicradle/environment.conf`; a wrapper `--gpu-mode=` option has higher priority.
 
 ```sh
-spotify --debug
-spotify --safe-mode
-spotify --gpu-mode=native
-spotify --gpu-mode=nvidia-desktop --debug
+sonicradle --debug
+sonicradle --safe-mode
+sonicradle --gpu-mode=native
+sonicradle --gpu-mode=nvidia-desktop --debug
 ```
 
 Safe/native modes avoid the optional GL probe. Safe mode also removes inherited
@@ -66,41 +66,24 @@ A warning followed by exit 0, explicit user GPU settings, SIGINT/SIGTERM or a la
 unrelated failure does not cause a restart. Signals are forwarded to the app.
 Persistent warnings in a still-running app can be handled with `--safe-mode`.
 
-## Spec integration
+## RPM integration
 
-The generated spec includes this equivalent placement/validation contract:
+The public bootstrap installs `/usr/bin/sonicradle` and the independent GPU
+helper under `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. The locally
+built target preserves the original executable at
+`/usr/share/sonicradle-client/spotify`; that vendor filename does not become
+an additional public terminal command. `bootstrap/sonicradle.py` generates the
+local target spec and desktop integration.
 
-```spec
-BuildRequires: desktop-file-utils
-Requires: desktop-file-utils
-Requires: hicolor-icon-theme
-Requires: coreutils
+The target requires desktop-file-utils and hicolor-icon-theme. Its desktop file
+is validated at build time. Fedora's standard desktop/icon transaction triggers
+handle install, upgrade and removal. No unconditional GPU probe runs in a root
+installation script, and no hardware-specific system configuration is written.
 
-%install
-# The prepared source tarball already includes the generated wrapper and helper.
-cp -ar usr %{buildroot}/
-chmod 0755 %{buildroot}%{_bindir}/spotify
-chmod 0755 %{buildroot}%{_datadir}/spotify-client/spotify-gpu.sh
-desktop-file-validate %{buildroot}%{_datadir}/applications/spotify.desktop
-
-%files
-%{_bindir}/spotify
-%{_datadir}/spotify-client/
-%{_datadir}/applications/spotify.desktop
-%{_datadir}/icons/hicolor/*/apps/spotify-client.*
-```
-
-On Fedora, desktop-file-utils owns transfiletriggerin/postun for
-`/usr/share/applications`, invoking update-desktop-database. The hicolor/GTK
-packages supply the matching icon-cache transaction triggers. The installed
-Fedora package scripts were checked with `rpm -q --filetriggers`. These standard
-triggers cover install, upgrade and removal; duplicating them in Spotify's %post
-is unnecessary. The package validates its desktop file during build and never
-runs an unconditional cache command or GPU probe at install time.
-
-Implementation: `src/generate_bin.sh`, `src/spotify-gpu.sh`, `src/generate_spec.sh`.
-The tests simulate the driver/session combinations and initialization failures;
-actual rendering/playback on every physical GPU remains a hardware QA task.
+The legacy `src/generate_bin.sh`/`src/generate_spec.sh` code is kept only for local
+historical comparison; it is not the public COPR source generator. Launcher
+tests simulate driver/session combinations and initialization failures. Actual
+rendering/playback on every physical GPU remains a hardware QA task.
 
 NVIDIA PRIME reference:
 https://download.nvidia.com/XFree86/Linux-x86_64/555.58/README/primerenderoffload.html

@@ -1,93 +1,96 @@
-# Stable version checks, malware gates and packaging numbers
+# Version checks, CI scans and COPR delivery
 
-## Schedule
+## Schedule and source selection
 
-The reference location is Spotify AB in Stockholm, Sweden, listed by Spotify at
-https://investors.spotify.com/resources/default.aspx . The workflow uses
-`timezone: Europe/Stockholm` and `cron: 0 12,17 * * *`: every day at local noon
-and 17:00. Stockholm daylight saving is handled by GitHub's IANA timezone support:
-https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule
-GitHub may delay scheduled jobs during busy periods; these times are scheduler
-requests, not a real-time delivery guarantee.
+The workflow requests checks daily at 12:00 and 17:00 in `Europe/Stockholm`.
+GitHub manages daylight saving and may delay scheduled runs; this is not a
+real-time delivery guarantee. Manual dispatch can repackage unchanged versions.
+Code pushes run validation rather than publishing a package.
 
-Only `schedule` and `workflow_dispatch` trigger publication. Code pushes still
-run the separate validation workflow. A scheduled run reads the official stable
-amd64 Packages index (download.spotify.com/debian first, repository.spotify.com
-as the official fallback) and compares its upstream version with completed stable
-GitHub releases and successful COPR uploads. If unchanged, it exits after metadata
-checks; no DEB download, signature update, scan, RPM build or COPR submission runs.
-A manual Run workflow always requests packaging of the current official stable
-version, with or without a version change.
+Official source metadata is checked first at `download.spotify.com/debian`,
+then `repository.spotify.com`. Stable is the default channel; the explicit
+`-unstable` client option selects Spotify's testing channel. RPM Fusion's
+Fedora 44 release/updates/updates-testing and Rawhide packaging references are
+checked last. They can identify newer LPF references but cannot override the
+verified official DEB channel, filename, size or SHA256. Fedora stable does not
+mean Spotify stable.
 
-## Counter and concurrency
+On 2026-10-30 the primary metadata URL returned 404, and the repository fallback
+advertised stable `1.2.95.453.g0eeebbed` and testing
+`1.3.4.258.gc60b10b0946a`. Directory-listing errors are not used as repository
+availability checks. The signing-key URL supplied by the owner is not a package
+index. No host APT sources or trust store is changed.
 
-The visible RPM identity is `<upstream-version>-<packaging-number>`. For example:
+## Version identity and concurrency
 
-* `1.2.95...-3` → manual rebuild → `1.2.95...-4`.
-* New upstream `1.2.96...` → `1.2.96...-1`.
+The payload-free bootstrap is named `sonicradle`; it carries metadata for both
+channels. Its RPM version follows the stable upstream version. The local target
+is named `sonicradle-client-local` for both channels. A switch replaces that
+single package instead of creating side-by-side stable/testing installs.
 
-The planner reads all release pages, matching Git tags and paginated COPR build
-history for that exact upstream version. Numbers for another upstream version
-are ignored. Existing distribution suffixes are recognized. The highest existing
-or reserved number plus one is used; numbers are never derived from run count,
-lexical sorting or a fixed spec constant.
+The planner compares the selected source signature with previously delivered
+metadata. A scheduled check with an unchanged delivered signature stops before
+build/scanning/COPR submission. A change to either channel requires a new
+bootstrap so testing metadata does not become stale merely because stable has
+not changed.
 
-Before downloading/scanning, an atomic GitHub reference creation reserves
-`refs/tags/v<version>-<number>` at the workflow commit. An existing reference is
-never updated. A reservation collision advances to the next free number. Other
-API errors stop the workflow. The shared concurrency group serializes scheduled
-and manual executions. The reserved number becomes RPM `Release:` and the
-source RPM is checked again immediately before COPR upload.
+Packaging numbers increase for the same bootstrap version and start at 1 for a
+new upstream version. Annotated, metadata-only reservation tags use
+`sonicradle-v<stable-version>-<release>`. They are not GitHub Releases and do not
+contain RPM downloads. An existing reservation is never rewritten; interrupted
+attempts can leave numbering gaps. A shared concurrency group prevents parallel
+scheduled/manual delivery from racing. COPR build history also informs the
+counter and successful-delivery decision.
 
-A failed or cancelled attempt leaves its reserved tag. It may produce a gap,
-but its number is never reused: a partially successful COPR upload cannot collide
-with a later attempt. Rerun the full workflow to get a new number. Rerunning only
-a failed COPR/publish job intentionally retains its original source artifact and
-number. Keep release tags even when deleting failed workflow runs.
+## Mandatory scan in GitHub Actions
 
-## Scan and delivery gates
+The Actions VM downloads each selected official DEB, checks size and SHA256,
+updates an isolated ClamAV database and raw-extracts the archive. Debian
+maintainer scripts are not executed. The original DEB, extracted application
+and control scripts are scanned with mandatory malware/heuristic signatures.
+Malware findings, scan errors, encrypted/corrupt content and exhausted limits
+stop delivery. A separate PUA pass permits only explicitly reported PUA-only
+findings; a non-PUA result or scanner error in that pass remains blocking.
 
-The source check first requests
-`https://download.spotify.com/debian/dists/stable/non-free/binary-amd64/Packages`,
-then falls back to
-`https://repository.spotify.com/dists/stable/non-free/binary-amd64/Packages`.
-The primary currently returns 404 while the fallback index works; directory
-listing status is never used as an availability test. The public signing key
-URL under download.spotify.com/debian is a key resource, not a Packages index.
-No APT source or trusted-key files on the build host are modified.
+The bootstrap includes a CI scan record tied to each source SHA256, not the
+DEB or extracted application. Scan records are statements produced by this
+workflow, not a guarantee against unknown threats or a grant of legal rights.
+The bootstrap archive is separately checked for its explicit free-helper allowlist; no vendor payload is included.
 
-The selected official HTTPS metadata supplies the filename, size and SHA256. That exact
-record is pinned between jobs. After verification, freshclam updates isolated
-official signatures. The DEB is then raw-extracted without running maintainer
-scripts. The original DEB, unpacked files, control scripts, ELF binaries, supported
-nested archives and optional additional codec libraries are scanned. The mandatory
-malware scan includes heuristics; encrypted content, broken executable alerts,
-scan errors and exhausted limits block packaging. A second scan also enables PUA.
-Only exit code 1 accompanied exclusively by `PUA.*` detections is advisory;
-malware/heuristic detections or errors in either pass still block packaging.
-`clamscan.log` records the mandatory pass; `clamscan-pua.log` and `pua-status.json`
-retain the separate PUA result. Reports are reset for each attempt.
+ClamAV is neither installed nor run on the user's computer by Sonicradle.
+The user downloads the selected official DEB and verifies the same size/hash
+before extraction and local RPM construction. A mismatched source is rejected;
+the local builder cannot treat a different file as the previously scanned one.
 
-ClamAV can detect known malware and backdoor signatures; a clean result is not
-proof that every unknown or deliberately hidden threat is absent. No external
-sample upload, private token or paid malware service is used.
+## Delivery and cleanup
 
-Only a clean scan allows RPM/SRPM creation. COPR upload uses the current project
-configuration and only compatible candidate targets; removed chroots are never
-restored by the workflow. Submission waits for COPR. GitHub publication depends
-on successful COPR completion. A failed scan/build/upload leaves evidence in
-workflow artifacts and does not expose a new complete GitHub release.
+Only the payload-free bootstrap SRPM is uploaded directly to COPR. The workflow
+waits for successful builds on the current compatible enabled targets. There is
+no GitHub Release creation or RPM artifact publication. Metadata, scan logs and
+attestation evidence can be retained as workflow artifacts; application payloads,
+source/binary RPMs and extracted trees cannot.
 
-## Payload-free delivery model (2026-10-29)
+An always-run cleanup removes temporary DEBs, unpacked application files, RPMs
+and private COPR configuration on success or failure. GitHub manages teardown
+of the hosted runner; a shell cleanup step cannot independently prove VM reset
+or erase provider backups. The workflow does not claim to do so. COPR hosting
+also does not transfer the uploader's obligations to Fedora.
 
-The release job now builds only the community bootstrap using
-`tools/build_bootstrap.py`; it does not use `src/build_once.sh` or upload any
-Spotify payload. The bootstrap SRPM is scanned before its binary build and
-COPR delivery. Earlier descriptions of raw DEB scans above describe the local
-client build, now performed by `bootstrap/spotify.py` on the user's machine.
-Version detection/reservation/scheduling remain unchanged. The installed helper
-shows terms and consent before download, then verifies the pinned SHA256, runs
-freshclam and both scans, preserves vendor files and builds spotify-client-local.
-The local target requires the bootstrap `spotify` package. Only its installation
-or removal uses the system authorization prompt. Rejection cancels activity and
-requests removal of that target only; authorization failure is surfaced.
+## Local setup
+
+`sonicradle --setup` selects stable; `sonicradle --setup -unstable` selects
+testing. `sonicradle --update` returns to/currently selects stable, while
+`sonicradle --update -unstable` selects testing regardless of the previously
+installed channel. Launching `sonicradle` runs the installed choice. Source hash,
+version, channel and packaging revision are bound to the approval/build context.
+
+The original app tree and embedded notices are preserved. Local packaging uses
+normal user privileges; system authorization is requested only for the final
+package-manager installation/removal. Returning to stable can be a version
+downgrade. No local result may be uploaded by the public delivery workflow.
+
+References:
+
+* [GitHub schedule syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule)
+* [Spotify investor contact information](https://investors.spotify.com/resources/default.aspx)
+* [COPR build and licensing rules](https://docs.copr.fedorainfracloud.org/user_documentation.html#what-i-can-build-in-copr)

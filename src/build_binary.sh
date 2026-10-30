@@ -18,4 +18,4 @@ rpmbuild --rebuild --target x86_64 "${build_options[@]}" \
     --define "_topdir $work" --define "_tmppath $work/tmp" \
     --define 'dist %{nil}' --define '_binary_payload w3.zstdio' \
     "$source_rpm" 2>&1 | tee "$output/rpm-build.log"
-cp "$work"/RPMS/x86_64/spotify-*.x86_64.rpm "$output/"
+cp "$work"/RPMS/x86_64/sonicradle-*.x86_64.rpm "$output/"

@@ -2,27 +2,31 @@
 
 Project: https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/
 
-## Hosting constraint
+The historical project identifier remains descriptive. The independent community
+package and command are `sonicradle`; the local client package is
+`sonicradle-client-local`. This is not an official Spotify/Fedora/Red Hat project.
+For the paste-ready Description/Installation text, use
+[copr-description.md](copr-description.md).
 
-The release workflow now uploads a **payload-free community bootstrap** SRPM.
-`tools/build_bootstrap.py` uses an explicit allowlist of new MIT helpers, pinned
-source metadata and notices. Spotify binaries, icons, application archives and
-inherited generators with unresolved licensing are not included.
+## Hosting boundary
 
-The separately built `spotify-client-local` RPM is proprietary, remains on the
-user's computer, and must not be submitted to COPR or GitHub by this workflow.
-The standalone legacy `src/build_once.sh` path is retained for local comparisons;
-it is no longer the workflow's COPR source producer.
+Only the payload-free community bootstrap SRPM is uploaded to COPR. Its explicit
+source allowlist contains newly authored MIT helpers, metadata, CI scan records
+and notices. It excludes the DEB, app tree, proprietary icons and inherited
+generators without a verified compatible grant. The proprietary client RPM is
+built privately on the user's computer and is never submitted by this workflow.
 
-Reference: https://docs.copr.fedorainfracloud.org/user_documentation.html#what-i-can-build-in-copr
-Legal analysis: [legal-distribution.md](legal-distribution.md).
+COPR hosting does not transfer the maintainer's responsibilities to Fedora.
+The uploader must have rights to uploaded content and follow the
+[COPR rules](https://docs.copr.fedorainfracloud.org/user_documentation.html#what-i-can-build-in-copr).
+See [the current legal review](legal-review-2026-10-30.md).
 
-## GitHub secret and running the workflow
+## API configuration
 
 1. Log in at https://copr.fedorainfracloud.org/api/ and copy the complete generated configuration.
 2. Open https://github.com/universish/spotify-client..copr..ci/settings/secrets/actions
 3. Choose New repository secret, name it `COPR_CONFIG`, and paste the complete configuration as its value.
-4. Open Actions → Stable Spotify bootstrap RPMs and COPR → Run workflow. No force or submit checkbox is needed.
+4. Use the repository's packaging workflow and Run workflow for a manual rebuild.
 
 ```ini
 [copr-cli]
@@ -32,49 +36,47 @@ token = YOUR_GENERATED_TOKEN
 copr_url = https://copr.fedorainfracloud.org
 ```
 
-The API page states tokens expire after 180 days. Renew the repository secret
-when needed. Local copr-cli can use the same generated configuration in
-`~/.config/copr` with permissions 0600. Workflow submission uses a temporary
-private configuration file, removes it on exit, and waits for the COPR result.
-A missing/invalid `COPR_CONFIG` stops a required build before reserving a number
-or downloading the DEB; unchanged scheduled checks need no COPR secret.
+Do not put the token into Git, an issue, a README or a chat. Renew it when its
+COPR API expiration requires it. Local copr-cli can read the same configuration
+from `~/.config/copr` with permissions 0600. CI uses a temporary private file,
+removes it on exit and waits for the COPR result. No webhook is required: the
+scheduled/manual workflow submits the free SRPM through the API.
 
-## Submission and release numbering
+No VirusTotal API key is required by this implementation. ClamAV runs in the
+GitHub Actions VM only. It is neither installed nor run by the local bootstrap
+on the user's computer. No proprietary sample is uploaded to VirusTotal.
 
-`spotify-rpm-releases.yml` performs version detection, number reservation,
-bootstrap source construction/scanning, source/binary RPM builds, automatic COPR upload and stable
-GitHub publication in that order. See [release-flow.md](release-flow.md).
-`SPOTIFY_RELEASE` is carried unchanged into RPM `Release:` and its changelog.
-The source RPM's version-release is checked before submission.
+## Submission, numbering and evidence
 
-`tools/submit_copr.sh` intersects `tools/targets.py --candidates` with the project's
-live enabled chroots. An API read failure or an empty compatible list stops
-submission; it never falls back to stale/all targets. Upload logs and the exact
-selected target list are saved in the workflow's COPR validation artifact.
-Metadata checks contact Spotify; bootstrap-source scanning updates ClamAV.
-COPR binary rebuilds consume only free bootstrap sources and need no outbound
-build network. The proprietary DEB is downloaded/scanned on the user host.
+The workflow detects both official channels, reserves a packaging number, scans
+the official DEBs in CI, builds/scans the free SRPM, uploads it directly to COPR
+and waits for completion. It does not create GitHub Releases. See
+[release-flow.md](release-flow.md) for the source signature, reservation tags,
+numbering, scan record and cleanup rules.
 
-For a new packaging number, use the GitHub workflow. Rebuilding an old uploaded
-source directly in COPR keeps that source RPM's number. The optional SCM Makefile
-therefore requires an explicit `SPOTIFY_RELEASE`; it does not share the Actions
-counter. Local builds default to release 1 unless explicitly overridden.
+`tools/submit_copr.sh` intersects compatible candidates with the project's live
+enabled chroots. An API read failure or an empty compatible list stops
+submission; it never restores targets removed by the owner. Selected targets,
+submission logs and scan records are delivery evidence. Package/RPM artifacts
+are not retained in GitHub Actions.
 
-## Current target configuration
+For a new packaging number, use the workflow. Rebuilding an old source in COPR
+keeps that source RPM's identity. Source tags are retained as reservations;
+removing a GitHub Release must not erase numbering history. Repeated packaging
+of one upstream version increments Release; a new version starts at 1.
 
-The live project list was refreshed after the user's removals on 2026-10-28.
-`packaging/targets.json` now contains 25 enabled targets: 17 candidates and 8
-incompatible runtimes. Removed EL7/EL8, custom-1, Mageia 8/cauldron, Fedora 43,
-openEuler 20.03/22.03, 32-bit and ARM entries are absent. Fedora 45 is enabled.
+## Targets
 
-* `candidate`: x86_64 or x86_64_v2 targets with a plausible runtime. A successful
-  COPR build does not itself prove graphical login and playback work.
-* `incompatible`: remaining EL9, Mageia 9 and openEuler 24.03 runtimes predate
-  the current DEB's glibc >= 2.39 requirement. Dependencies are never suppressed.
+The earlier target snapshot in `packaging/targets.json` excludes EL7/EL8,
+custom-1, Mageia 8/cauldron, Fedora 43, openEuler 20.03/22.03, 32-bit and ARM.
+Fedora 45 is included. Live enabled targets are checked again at submission.
+A candidate architecture alone is not evidence of runtime compatibility.
 
-The x86_64_v2 package contains the same official amd64 binary; it is not optimized
-from source for v2. Github Releases continues to publish x86_64 binaries only.
+Remaining older EL9, Mageia 9 and openEuler 24.03 runtimes were classified as
+incompatible with the inspected DEB's glibc >= 2.39 requirement. Dependencies
+are not suppressed. x86_64_v2 targets would consume the same official amd64 app,
+not an application rebuilt from source for v2. A successful bootstrap build
+cannot prove graphical login/audio playback on each target distribution.
 
-Sources:
-https://repository.spotify.com/dists/stable/non-free/binary-amd64/Packages
+Live project API:
 https://copr.fedorainfracloud.org/api_3/project?ownername=universish&projectname=Spotify..Client

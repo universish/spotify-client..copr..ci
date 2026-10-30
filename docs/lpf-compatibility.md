@@ -8,11 +8,13 @@ Remote packaging instructions are reference material; they are not executed.
 ## Preserved application and runtime
 
 The verified official amd64 DEB is raw-extracted without running Debian maintainer
-scripts. After the mandatory malware scan and separate PUA report, its entire
-`usr/share/spotify` tree is moved to `/usr/share/spotify-client`, as LPF does.
+scripts. Mandatory malware scanning and the separate PUA report now run in CI.
+The user host checks the same source hash and moves the complete `usr/share/spotify`
+tree to `/usr/share/sonicradle-client`, following LPF's resource-preservation approach.
 Apps, locale files, icons, bundled libraries, vendor desktop file and apt keys
 remain intact. Apt keys are application data; no host trust store is changed.
-The package and command names remain `spotify`.
+The current community package and command are `sonicradle`; the local target
+is `sonicradle-client-local`. The application bytes remain Spotify's.
 
 All original regular files are hashed before generated launch helpers are added.
 The RPM disables stripping and archive determinism rewriting; `%check` verifies
@@ -43,12 +45,15 @@ advertises **1.2.95.453.g0eeebbed**. LPF's updater examines the official origin
 pool rather than restricting itself to the stable index. This version difference
 can explain UI differences; packaging layout alone does not change the vendor UI.
 
-The automated release workflow retains the stable-only source policy. Matching
-LPF's newer source selection requires a separate source-policy decision. The
-local LPF reference build uses explicitly pinned metadata for comparison and
-does not change the automated release channel.
+The current bootstrap includes separate official stable and testing metadata.
+Stable remains the default; `sonicradle --setup -unstable` or
+`sonicradle --update -unstable` explicitly selects testing. Both channels replace
+the same local package. A pool filename is not accepted as proof of channel
+membership. RPM Fusion references are checked last and cannot override the
+official DEB channel or hash.
 
-`SPOTIFY_DEB_FILE=/path/to/cached.deb src/build_once.sh stable output` reuses a
+The following describes the legacy local comparison script, not the current
+user installer: `SPOTIFY_DEB_FILE=/path/to/cached.deb src/build_once.sh stable output` reuses a
 cached LPF source only when its size and SHA256 match the selected metadata.
 A mismatch stops before extraction; an existing cache never skips signature
 updates or either scan. Without that variable the verified HTTPS download path
@@ -86,7 +91,7 @@ The selected deployment model now distributes only the independently authored
 bootstrap helpers. It follows LPF's local-build architecture without requiring
 LPF's Fedora-specific framework on every target distribution. It does not copy
 the supplied specs into the distributed source package. The actual local target
-is named spotify-client-local; the public bootstrap and command remain spotify.
+is named sonicradle-client-local; the public bootstrap and command are sonicradle.
 
 
 ## Actual LPF framework versus this standalone builder
@@ -98,3 +103,14 @@ uses its own standalone builder, as explicitly chosen by the owner. It does not
 use LPF's dedicated pkg-build account, lifecycle macros or notification daemon.
 See [the comparison and regression evidence](lpf-framework-audit.md) for the
 implemented behavior and the remaining architectural differences.
+
+## spotify-make master/devel review — 2026-10-30
+
+Both [master](https://github.com/sergiomb2/spotify-make/tree/master) and
+[devel](https://github.com/sergiomb2/spotify-make/tree/devel) were reviewed as
+historical packaging references. Useful ideas include DESTDIR staging, separate
+launcher/application paths and preservation of vendor resources; the independent
+builder already uses equivalent concepts. Their old HTTP pool scraping,
+unchecked download path, Qt-era libraries and compatibility-library symlinks
+are not copied into the current workflow. They would not establish a verified
+current stable/testing source or appropriate modern runtime dependencies.
