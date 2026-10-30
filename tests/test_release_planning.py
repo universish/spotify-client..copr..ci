@@ -73,9 +73,16 @@ class PlanningTests(unittest.TestCase):
         self.assertNotEqual(planner.source_signature(records), signature)
 
     def test_unstable_counter_resets_on_new_upstream_version(self):
-        refs = [dict(ref('1.2.3', 4), reservation={'channels': {'unstable': {'version': '2.0', 'release': 9}}})]
-        self.assertEqual(planner.channel_release('unstable', '2.0', refs, 5), 10)
-        self.assertEqual(planner.channel_release('unstable', '2.1', refs, 5), 1)
+        refs = [dict(ref('1.2.3', 4), reservation={'channels': {'stable': {'version':'1.2.3','release':4}, 'unstable': {'version': '2.0', 'release': 9}}})]
+        self.assertEqual(planner.channel_release('unstable', '2.0', refs, 5, [build('1.2.3',4)]), 10)
+        self.assertEqual(planner.channel_release('unstable', '2.1', refs, 5, [build('1.2.3',4)]), 1)
+
+    def test_failed_reservation_keeps_first_unstable_client_at_one(self):
+        refs = [dict(ref('1.2.3', 4), reservation={'channels': {
+            'stable': {'version':'1.2.3','release':4},
+            'unstable': {'version':'2.0','release':1}}})]
+        self.assertEqual(planner.channel_release('unstable','2.0',refs,5,[build('1.2.3',4,'failed')]),1)
+        self.assertEqual(planner.channel_release('unstable','2.0',refs,5,[build('1.2.3',4)]),2)
 
 
 class ReservationTests(unittest.TestCase):

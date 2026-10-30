@@ -113,12 +113,21 @@ def plan(version, releases, refs, builds, manual=False, signature=None):
             'reason': 'Manual repackaging requested.' if manual else 'New channel metadata detected.'}
 
 
-def channel_release(channel, version, refs, stable_release):
+def channel_release(channel, version, refs, stable_release, builds=()):
     if channel == 'stable':
         return stable_release
     numbers = []
     for ref in refs:
-        old = ref.get('reservation', {}).get('channels', {}).get(channel, {})
+        channels = ref.get('reservation', {}).get('channels', {})
+        stable = channels.get('stable', {})
+        # A failed reservation never delivered this channel to COPR, so it does
+        # not consume a local client revision (in particular the first -1).
+        delivered = any(b.get('state') == 'succeeded'
+                        and revision_from_copr(stable.get('version', ''), b) == stable.get('release')
+                        for b in builds)
+        if not delivered:
+            continue
+        old = channels.get(channel, {})
         if old.get('version') == version and isinstance(old.get('release'), int):
             numbers.append(old['release'])
     return max(numbers, default=0) + 1
@@ -172,10 +181,11 @@ def main():
     signature = source_signature(channels)
     github = GitHub(repository, os.environ.get('GH_TOKEN', ''))
     refs = github.reservations()
-    result = plan(version, [], refs, copr_builds(), args.event == 'workflow_dispatch', signature)
+    builds = copr_builds()
+    result = plan(version, [], refs, builds, args.event == 'workflow_dispatch', signature)
     if result['needed']:
         pins = {channel: {'version': record['RPMVersion'],
-                          'release': channel_release(channel, record['RPMVersion'], refs, result['release'])}
+                          'release': channel_release(channel, record['RPMVersion'], refs, result['release'], builds)}
                 for channel, record in channels.items()}
         if not args.dry_run:
             if not os.environ.get('GH_TOKEN'):

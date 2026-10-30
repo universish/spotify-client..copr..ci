@@ -88,6 +88,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn('*.rpm', artifact_paths)
         self.assertIn('output/scan-reports/', artifact_paths)
         self.assertIn('if: always()', workflow)
+        scan_step = workflow.split('      - name: Download, verify, extract and scan upstream DEBs in this runner', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('TMPDIR: /tmp', scan_step)
+        self.assertIn('/tmp/sonicradle-ci-scan-* /tmp/sonicradle-freshclam.*', workflow)
         self.assertLess(workflow.index('tools/scan_sources.py'), workflow.index('tools/build_bootstrap.py'))
 
 

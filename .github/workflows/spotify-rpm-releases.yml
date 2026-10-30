@@ -44,6 +44,10 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Download, verify, extract and scan upstream DEBs in this runner
         if: steps.version.outputs.needed == 'true'
+        # Ubuntu's freshclam AppArmor profile permits owner /tmp/**; the
+        # runner-specific workspace temp directory is outside that allowance.
+        env:
+          TMPDIR: /tmp
         run: python3 tools/scan_sources.py "$RUNNER_TEMP/sonicradle-metadata/source.json" output/scan-reports
       - name: Build payload-free bootstrap RPMs
         if: steps.version.outputs.needed == 'true'
@@ -67,7 +71,7 @@ jobs:
         shell: bash
         run: |
           find output -type f \( -name '*.rpm' -o -name '*.deb' \) -delete 2>/dev/null || true
-          rm -rf -- "$RUNNER_TEMP"/sonicradle-ci-scan-* "$RUNNER_TEMP"/sonicradle-bootstrap-* "$RUNNER_TEMP"/sonicradle-copr.* "$RUNNER_TEMP"/sonicradle-copr-* "$RUNNER_TEMP"/sonicradle-copr-venv "$RUNNER_TEMP"/spotify-rpm.*
+          rm -rf -- "$RUNNER_TEMP"/sonicradle-ci-scan-* "$RUNNER_TEMP"/sonicradle-bootstrap-* "$RUNNER_TEMP"/sonicradle-copr.* "$RUNNER_TEMP"/sonicradle-copr-* "$RUNNER_TEMP"/sonicradle-copr-venv "$RUNNER_TEMP"/spotify-rpm.* /tmp/sonicradle-ci-scan-* /tmp/sonicradle-freshclam.*
           # GitHub tears down this hosted runner VM after the job. This workflow
           # cannot reset the underlying provider VM itself.
       - name: Retain reports and pinned metadata only

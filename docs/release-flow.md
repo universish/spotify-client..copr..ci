@@ -40,7 +40,8 @@ new upstream version. Annotated, metadata-only reservation tags use
 contain RPM downloads. An existing reservation is never rewritten; interrupted
 attempts can leave numbering gaps. A shared concurrency group prevents parallel
 scheduled/manual delivery from racing. COPR build history also informs the
-counter and successful-delivery decision.
+counter and successful-delivery decision. The testing client revision counts
+only delivered catalogs; a failed reservation does not consume its initial `-1`.
 
 ## Mandatory scan in GitHub Actions
 
