@@ -94,3 +94,88 @@ approval, package ZIP artifacts 12762506955 and 12763635337 were deleted through
 the authenticated GitHub UI. Fresh API listings confirm only metadata,
 validation logs and download statistics remain for both old runs. The public
 bootstrap release and its current package artifacts were not removed.
+
+
+## Sonicradle delivery verified — 2026-10-30
+
+The source transition was committed and pushed to both main and the review
+branch. Code at `afb993906520218489a2a20daa8627324586e024` passed 102 tests.
+The earlier user-authored README and bilingual notice contributions remain in
+Git history; the current notice preserves their wording with the necessary
+name and scan-location corrections.
+
+[Actions run 41073185870](https://github.com/universish/spotify-client..copr..ci/actions/runs/41073185870)
+completed successfully, including CI scanning, bootstrap construction, COPR
+submission/wait and unconditional cleanup. It ran ClamAV 1.5.4 with database
+28169. Both stable and testing passed the mandatory malware scan. PUA-only
+warnings were recorded separately as advisory, consistent with the selected
+policy. No ClamAV process or installation was used for the end-user build.
+
+[COPR build 11231606](https://copr.fedorainfracloud.org/coprs/build/11231606/)
+succeeded for the 17 selected enabled compatible targets. The submitted
+`sonicradle-1.2.95.453.g0eeebbed-6.src.rpm` was downloaded from COPR and its
+SHA256 matched the Actions `SHA256SUMS` entry exactly:
+`916f520da2633acd6093c794bf31bf5990fea4c5466dbf7841af2208ff4024b1`.
+Its source archive contained exactly seven allowlisted files: launcher, GPU
+helper, two notices, copyright record, helper license and source catalog.
+No application payload, vendor icon, DEB or local scan script was present.
+The delivered launcher SHA256 matched the Git source exactly.
+
+The Fedora 44 binary was downloaded through the repository primary metadata,
+and both the metadata checksum and package checksum matched. `rpm -Kv`
+validated its OpenPGP signatures and payload digests with key fingerprint
+`f74d6e06914d8c3975cd0751d364643f98a68580`. The package was 25,049 bytes;
+SHA256 `9f945436801b54cdad9d2f8b9711b772bb526dd42e977512bb46de8df3cdd920`.
+Its file list contained only the community bootstrap, and its runtime
+requirements contained neither freshclam nor clamscan. The binary's embedded
+catalog matched the submitted source catalog exactly.
+
+The catalog pinned stable `1.2.95.453.g0eeebbed`, revision 6, and testing
+`1.3.4.258.gc60b10b0946a`, revision 1. The unused reservation 5 records a failed
+CI attempt, so delivery uses 6 without rewriting a reserved tag. A failed
+reservation does not consume testing's initial client revision.
+
+Developer verification then used the delivered launcher's actual build body
+for each channel, with the installation callback replaced by identity/hash
+inspection. It did not create a user consent record, install either package,
+launch vendor code or run a local antivirus scan. The official sources were
+verified against the successful CI scan catalog before extraction. Both RPM
+`%check` stages validated 114 original vendor-file hashes and private bundled
+ELF libraries did not leak into global RPM provides:
+
+| Channel | Local package | SHA256 |
+| --- | --- | --- |
+| stable | sonicradle-client-local-1.2.95.453.g0eeebbed-6.x86_64.rpm | 67574b0236bffe7ee69b72290bae7dd2affcf339ced0daa660dcbfaea3d81296 |
+| testing | sonicradle-client-local-1.3.4.258.gc60b10b0946a-1.x86_64.rpm | d7e208515b4056ad0c6971089d53866d3549004f533acd602b2a530dc94f3455 |
+
+These client RPMs remain private local verification output and were not
+uploaded to COPR, Releases or Actions artifacts. No graphical launch or
+end-user installation across the supported distributions is claimed here.
+
+The retained Actions artifact `sonicradle-validation`, ID 12986083420, was
+7,594 bytes. Its ZIP digest matched the API digest
+`099cb85a81c3aef2db984bb5f51582ee34bcf6cddde24abecf089479ca6c3972`.
+The ZIP contained 12 entries: scan reports, build/COPR logs, checksums, selected
+targets and source metadata. There were no RPMs, DEBs or application archives.
+Cleanup ran before artifact upload. The hosted job then completed;
+[GitHub provisions a fresh VM per job for this runner type](https://docs.github.com/en/actions/how-tos/manage-runners/github-hosted-runners/use-github-hosted-runners).
+Provider-level teardown/backup erasure is not independently audited by this
+project.
+
+A subsequent real-source scheduled planner dry run returned `needed: false`
+after matching both upstream source identities to the successful COPR delivery;
+it stopped before DEB downloading, scanning, building or submission. Manual
+repackaging and channel revision behavior are covered by the planner tests.
+
+The preserved license manifest still passed all 23 file digests and both
+OpenSSL timestamp checks. The unused inherited logo SVG was removed from the
+current source tree; Git history was not rewritten.
+
+### Remaining legacy-host cleanup
+
+The new workflow creates no GitHub Release or RPM artifact. The legacy -2,
+-3 and -4 Release records and the payload-free RPM artifact 12917461854 from
+run 40919031213 still require confirmed deletion and an absence check. They
+must not be described as removed until the remote state proves it. The older
+proprietary release assets and two proprietary Actions ZIP artifacts had
+already been removed, as recorded in the historical validation above.

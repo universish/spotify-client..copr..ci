@@ -155,4 +155,5 @@ distributed bootstrap source archive.
 The automated workflow checks official Spotify metadata before RPM Fusion's
 Fedora 44/Rawhide packaging references. No GitHub Release RPMs are published.
 COPR receives only the free bootstrap SRPM; the proprietary client is built on
-the end user's computer. No Nginx, Docker Hub, GHCR or usage telemetry is used.
+the end user's computer. The community helper uses no Nginx, Docker Hub or GHCR and adds no usage
+telemetry. This statement does not describe the vendor client’s network behavior.

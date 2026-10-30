@@ -1,7 +1,7 @@
 # Sonicradle — yerel RPM kurucusu — universish
 
-> Bu belge Sonicradle geçişindeki kaynak kod davranışını anlatır. Eski `spotify`
-> RPM'si yeni komutları içermez; gerçek COPR yayın sonucu ayrıca doğrulanmalıdır.
+> Sonicradle `1.2.95.453.g0eeebbed-6`, COPR derlemesi `11231606` ile
+> yayımlandı. Eski `spotify` kurucusu yeni komutları içermez.
 
 **İndirmeden ve kurmadan önce okuyun:** COPR RPM'si küçük bir topluluk
 kurucusudur. Spotify uygulamasını, logosunu veya özel mülk ikililerini içermez.
@@ -94,7 +94,8 @@ kontrol edilir; resmî DEB kanalı ve SHA256 değerini geçersiz kılamaz.
 Main kurucu modeline geçirilmiştir. Önceki doğrulanan `1.2.95.453.g0eeebbed-4`
 yayını tarihsel kayıttır; yeni politika GitHub RPM yayını yapmaz. Temizlik ve COPR
 sonuçları [doğrulama kaydında](docs/validation.md) ayrıca belgelenir. Nginx, Docker Hub,
-GHCR veya telemetri kullanılmaz. GitHub dosyaları silinince indirme sayaçları kaybolur;
+GHCR kullanılmaz; kurucu kullanım telemetrisi eklemez. Spotify istemcisinin kendi
+ağ davranışı bu beyanın kapsamında değildir. GitHub dosyaları silinince indirme sayaçları kaybolur;
 COPR indirme sayısı da aktif kullanıcı sayısı değildir.
 
 ## Geliştirme
@@ -114,8 +115,8 @@ için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.
 
 # Sonicradle Local RPM Installer — universish
 
-> This guide describes the Sonicradle source transition. The older `spotify`
-> RPM does not contain these commands; the new COPR publication must be verified separately.
+> Sonicradle `1.2.95.453.g0eeebbed-6` was delivered by COPR build `11231606`.
+> The older `spotify` bootstrap does not contain the commands below.
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.
@@ -208,7 +209,8 @@ The `COPR_CONFIG` secret setting and active distribution selection are [in the C
 Main uses the payload-free bootstrap model. The previously verified
 `1.2.95.453.g0eeebbed-4` publication is historical; the new policy does not publish
 RPMs in GitHub Releases. Cleanup and COPR results are recorded separately in the
-[validation log](docs/validation.md). Nginx, Docker Hub, GHCR and telemetry are not used.
+[validation log](docs/validation.md). Nginx, Docker Hub and GHCR are not used. The community helper adds no usage
+telemetry; this statement does not describe the vendor client’s own network behavior.
 Deleting GitHub assets removes their download counters; COPR downloads also do
 not measure active users.
 

@@ -89,6 +89,11 @@ liability or an indemnity binding third parties. The active texts are
 
 [LICENSE](../LICENSE) scopes the grant for new contributions. Inherited files
 are not automatically relicensed because the repository is public or forkable.
+GitHub itself gives public-repository users a limited right to view and fork
+through the service, under [Terms section D.5](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#5-license-grant-to-other-users).
+The absence of a general upstream license therefore does not by itself show
+that this GitHub fork is unauthorized. That service-level permission is not a
+blanket MIT grant or permission to distribute inherited files through COPR.
 The distributed bootstrap excludes inherited generators with unresolved grants.
 The archived RPM Fusion bootstrap license applies to its corresponding material,
 not to Spotify or every file in this fork. The actual LPF framework has a
@@ -110,6 +115,9 @@ license for the proprietary application.
 ## Corrections made in the current documentation
 
 * Neutral community package/command names replace product-brand command names.
+* The unused inherited logo SVG was removed from the current source tree.
+  Original vendor icons are obtained only with the local client download;
+  this change does not rewrite historical Git objects or tags.
 * The COPR description identifies both the unofficial status and payload-free
   scope, and gives separate bootstrap/client operations.
 * Hosting on Fedora infrastructure is not described as a liability transfer.

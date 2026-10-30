@@ -205,3 +205,8 @@ made compatible by ignoring dependencies.
 Hosting, notices and consent do not transfer all responsibility to Fedora or
 users. Each participant retains their own obligations. This project grants no
 additional Spotify license and makes no claim of Spotify endorsement.
+
+The unused inherited `src/spotify-client.svg` was removed from the current source
+tree during the naming review. The public bootstrap has no vendor icon. Local
+client icons come from the original DEB and remain in the private client RPM.
+Historical Git commits were not rewritten.
