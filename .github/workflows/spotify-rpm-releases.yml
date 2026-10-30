@@ -18,12 +18,12 @@ jobs:
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 150
-    env:
-      TMPDIR: ${{ runner.temp }}
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
+      - name: Use the runner temporary directory for transient payloads
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Detect both channels and reserve a packaging revision
         id: version
         env:
