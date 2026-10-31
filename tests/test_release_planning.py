@@ -13,12 +13,12 @@ planner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(planner)
 
 
-def build(version, number, state='succeeded', name='sonicradle'):
+def build(version, number, state='succeeded', name='spot-fly-light'):
     return {'source_package': {'name': name, 'version': f'{version}-{number}'}, 'state': state}
 
 
 def ref(version, number, signature='pinned'):
-    return {'ref': f'refs/tags/sonicradle-v{version}-{number}', 'reservation': {'signature': signature}}
+    return {'ref': f'refs/tags/spot-fly-light-v{version}-{number}', 'reservation': {'signature': signature}}
 
 
 class PlanningTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class PlanningTests(unittest.TestCase):
 
     def test_manual_increments_same_pinned_version(self):
         result = planner.plan('1.2.3', [], [ref('1.2.3', 3)], [build('1.2.3', 3)], manual=True, signature='pinned')
-        self.assertEqual((result['needed'], result['release'], result['tag']), (True, 4, 'sonicradle-v1.2.3-4'))
+        self.assertEqual((result['needed'], result['release'], result['tag']), (True, 4, 'spot-fly-light-v1.2.3-4'))
 
     def test_unstable_change_rebuilds_same_stable_version(self):
         result = planner.plan('1.2.3', [], [ref('1.2.3', 3)], [build('1.2.3', 3)], signature='changed-unstable')
@@ -42,6 +42,25 @@ class PlanningTests(unittest.TestCase):
     def test_copr_history_and_legacy_tags_continue_counter(self):
         result = planner.plan('1.2.3', [], [{'ref': 'refs/tags/v1.2.3-4'}], [build('1.2.3', 9, name='spotify')], manual=True)
         self.assertEqual(result['release'], 10)
+
+    def test_old_sonicradle_success_does_not_skip_new_package_delivery(self):
+        old = {'ref': 'refs/tags/sonicradle-v1.2.3-6', 'reservation': {'signature': 'pinned'}}
+        result = planner.plan('1.2.3', [], [old], [build('1.2.3', 6, name='sonicradle')], signature='pinned')
+        self.assertTrue(result['needed'])
+        self.assertEqual((result['release'], result['tag']), (7, 'spot-fly-light-v1.2.3-7'))
+
+    def test_only_spot_fly_light_copr_success_can_fulfill_current_reservation(self):
+        result = planner.plan('1.2.3', [], [ref('1.2.3', 7)], [build('1.2.3', 7, name='sonicradle')], signature='pinned')
+        self.assertTrue(result['needed'])
+        self.assertEqual(result['release'], 8)
+
+    def test_testing_revision_continues_from_delivered_sonicradle_catalog(self):
+        old = {'ref': 'refs/tags/sonicradle-v1.2.3-6', 'reservation': {'channels': {
+            'stable': {'version': '1.2.3', 'release': 6}, 'unstable': {'version': '2.0', 'release': 1}}}}
+        self.assertEqual(planner.channel_release('unstable', '2.0', [old], 7,
+                         [build('1.2.3', 6, name='sonicradle')]), 2)
+        self.assertEqual(planner.channel_release('unstable', '2.0', [old], 7,
+                         [build('1.2.3', 6, name='spotify')]), 1)
 
     def test_copr_success_without_matching_source_signature_does_not_skip(self):
         self.assertTrue(planner.plan('1.2.3', [], [], [build('1.2.3', 1)], signature='unknown')['needed'])
@@ -60,6 +79,13 @@ class PlanningTests(unittest.TestCase):
     def test_legacy_distribution_suffix_counted(self):
         self.assertEqual(planner.plan('1.2.3', [], [], [build('1.2.3', '8.el10')], manual=True)['release'], 9)
         self.assertEqual(planner.revision_from_rpm('1.2.3', 'spotify-1.2.3-12.fc44.x86_64.rpm'), 12)
+
+    def test_rpm_name_and_git_tag_use_safe_prefix(self):
+        self.assertEqual(planner.revision_from_rpm('1.2.3', 'spot-fly-light-1.2.3-7.fc44.x86_64.rpm'), 7)
+        self.assertIsNone(planner.revision_from_rpm('1.2.3', 'spotXXflyYYlight-1.2.3-7.fc44.x86_64.rpm'))
+        tag = planner.plan('1.2.3', [], [], [])['tag']
+        self.assertEqual(tag, 'spot-fly-light-v1.2.3-1')
+        subprocess.run(['git', 'check-ref-format', 'refs/tags/' + tag], check=True)
 
     def test_unrelated_copr_package_not_counted(self):
         self.assertEqual(planner.plan('1.2.3', [], [], [build('1.2.3', 8, name='other')])['release'], 1)
@@ -97,8 +123,8 @@ class ReservationTests(unittest.TestCase):
                 return {}
         api = API()
         result = planner.reserve(api, '1.2.3', 4, 'a' * 40, {'signature': 'pins'})
-        self.assertEqual(result, (5, 'sonicradle-v1.2.3-5'))
-        self.assertEqual([c[0] for c in api.calls], ['/git/tags', '/git/refs', '/git/ref/tags/sonicradle-v1.2.3-4', '/git/tags', '/git/refs'])
+        self.assertEqual(result, (5, 'spot-fly-light-v1.2.3-5'))
+        self.assertEqual([c[0] for c in api.calls], ['/git/tags', '/git/refs', '/git/ref/tags/spot-fly-light-v1.2.3-4', '/git/tags', '/git/refs'])
         self.assertEqual(api.calls[0][1]['object'], 'a' * 40)
         self.assertIn('"signature": "pins"', api.calls[0][1]['message'])
 
@@ -107,6 +133,21 @@ class ReservationTests(unittest.TestCase):
             def call(self, path, data=None):
                 raise HTTPError('https://api.github.com', 403, 'forbidden', {}, io.BytesIO())
         with self.assertRaises(HTTPError): planner.reserve(API(), '1.2.3', 1, 'a' * 40)
+
+    def test_reads_legacy_and_current_annotated_reservations_without_rewriting(self):
+        api = planner.GitHub('owner/repository', '')
+        calls = []
+        def call(path, data=None):
+            self.assertIsNone(data)
+            calls.append(path)
+            if path == '/git/matching-refs/tags/':
+                return [{'ref': 'refs/tags/' + name, 'object': {'type': 'tag', 'sha': sha}}
+                        for name, sha in [('sonicradle-v1.2.3-6', 'old'), ('spot-fly-light-v1.2.3-7', 'new')]]
+            return {'message': '{"channels":{"unstable":{"version":"2.0","release":1}}}'}
+        api.call = call
+        records = api.reservations()
+        self.assertEqual(calls, ['/git/matching-refs/tags/', '/git/tags/old', '/git/tags/new'])
+        self.assertEqual(records[0]['reservation']['channels']['unstable']['release'], 1)
 
     def test_secret_errors_do_not_echo_value(self):
         with self.assertRaises(ValueError) as raised:

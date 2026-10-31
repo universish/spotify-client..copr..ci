@@ -1,7 +1,7 @@
 > Historical validation record. Dates, former package names, scans and public
 > releases below describe the implementation that existed at that time. They
-> are not current install instructions or evidence that the Sonicradle transition
-> is published. Current behavior is documented in `release-flow.md`; ClamAV now
+> are not current install instructions or evidence that a later naming transition
+> has been published. Current behavior is documented in `release-flow.md`; ClamAV now
 > runs in Actions only. New remote results should be appended after verification.
 
 # Validation evidence — 2026-10-27
@@ -187,3 +187,14 @@ had already been removed, as recorded in the historical validation above.
 This verifies repository-controlled Releases assets and Actions artifacts; it
 does not claim erasure of other people’s downloads or provider backups. The
 new workflow creates neither GitHub Releases nor RPM artifact archives.
+
+## Spot..Light naming transition — pending publication
+
+The community helper is being renamed from Sonicradle to Spot..Light. Current
+source instructions use package `spot-fly-light`, command `spot..fly..light`
+and local target `spot-fly-light-client-local`; the Sonicradle
+artifact names, build identifiers, hashes and test results above remain
+unchanged historical evidence. They do not prove a Spot..Light release has been
+published. New build, package and cleanup results must be appended after
+independent verification. The frozen original license evidence remains
+unchanged.

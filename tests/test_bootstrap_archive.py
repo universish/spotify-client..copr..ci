@@ -32,13 +32,16 @@ class BootstrapArchiveTests(unittest.TestCase):
             def observe(args, **kwargs):
                 spec_path = Path(args[-1])
                 text = spec_path.read_text()
-                self.assertIn('Name: sonicradle\n', text)
+                self.assertIn('Name: spot-fly-light\n', text)
+                self.assertIn('Obsoletes: sonicradle\n', text)
+                self.assertIn('Provides: sonicradle = 1.2.3-5%{?dist}\n', text)
+                self.assertEqual([line for line in text.splitlines() if line.startswith('Obsoletes:')], ['Obsoletes: sonicradle'])
                 self.assertNotIn('/usr/bin/clamscan', text)
                 self.assertNotIn('/usr/bin/freshclam', text)
                 archive_path = spec_path.parent.parent / 'SOURCES/bootstrap.tar.gz'
                 with tarfile.open(archive_path) as archive:
                     files = {member.name for member in archive.getmembers() if member.isfile()}
-                    self.assertEqual(files, {'bootstrap/' + name for name in ('sonicradle.py', 'sonicradle-gpu.sh',
+                    self.assertEqual(files, {'bootstrap/' + name for name in ('spot..fly..light.py', 'spot..fly..light-gpu.sh',
                         'eula.txt', 'DISCLAIMER.txt', 'COPYRIGHT', 'MIT-new-contributions.txt', 'source.json')})
                     records = json.load(archive.extractfile('bootstrap/source.json'))
                     self.assertEqual(set(records), {'stable', 'unstable'})

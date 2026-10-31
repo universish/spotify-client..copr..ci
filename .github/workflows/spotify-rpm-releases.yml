@@ -1,4 +1,4 @@
-name: Sonicradle channels and COPR
+name: Spot..Light channels and COPR
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
 
 # Atomic metadata tags reserve revisions. No GitHub Release is created.
 concurrency:
-  group: sonicradle-copr-release
+  group: spot..fly..light-copr-release
   cancel-in-progress: false
 
 jobs:
@@ -29,16 +29,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
-          SONICRADLE_METADATA_DIR: ${{ runner.temp }}/sonicradle-metadata
+          SPOT_FLY_LIGHT_METADATA_DIR: ${{ runner.temp }}/spot..fly..light-metadata
         run: python3 tools/plan_release.py --event "$GITHUB_EVENT_NAME"
       - name: Install packaging, scanning and COPR tools
         if: steps.version.outputs.needed == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils
-          python3 -m venv "$RUNNER_TEMP/sonicradle-copr-venv"
-          "$RUNNER_TEMP/sonicradle-copr-venv/bin/pip" install copr-cli
-          echo "$RUNNER_TEMP/sonicradle-copr-venv/bin" >> "$GITHUB_PATH"
+          python3 -m venv "$RUNNER_TEMP/spot..fly..light-copr-venv"
+          "$RUNNER_TEMP/spot..fly..light-copr-venv/bin/pip" install copr-cli
+          echo "$RUNNER_TEMP/spot..fly..light-copr-venv/bin" >> "$GITHUB_PATH"
       - name: Run regression tests
         if: steps.version.outputs.needed == 'true'
         run: python3 -m unittest discover -s tests -v
@@ -48,37 +48,37 @@ jobs:
         # runner-specific workspace temp directory is outside that allowance.
         env:
           TMPDIR: /tmp
-        run: python3 tools/scan_sources.py "$RUNNER_TEMP/sonicradle-metadata/source.json" output/scan-reports
+        run: python3 tools/scan_sources.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output/scan-reports
       - name: Build payload-free bootstrap RPMs
         if: steps.version.outputs.needed == 'true'
         env:
-          SONICRADLE_VERSION: ${{ steps.version.outputs.version }}
-          SONICRADLE_RELEASE: ${{ steps.version.outputs.release }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
         run: |
-          python3 tools/build_bootstrap.py "$RUNNER_TEMP/sonicradle-metadata/source.json" output
-          src/build_binary.sh output/sonicradle-*.src.rpm output
-          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/sonicradle-*.x86_64.rpm)" = "sonicradle $SONICRADLE_VERSION-$SONICRADLE_RELEASE x86_64"
-          sha256sum output/sonicradle-*.rpm > output/SHA256SUMS
+          python3 tools/build_bootstrap.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output
+          src/build_binary.sh output/spot-fly-light-*.src.rpm output
+          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/spot-fly-light-*.x86_64.rpm)" = "spot-fly-light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE x86_64"
+          sha256sum output/spot-fly-light-*.rpm > output/SHA256SUMS
       - name: Submit source RPM to enabled COPR targets and wait
         if: steps.version.outputs.needed == 'true'
         env:
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
-          SONICRADLE_VERSION: ${{ steps.version.outputs.version }}
-          SONICRADLE_RELEASE: ${{ steps.version.outputs.release }}
-        run: bash tools/submit_copr.sh output/sonicradle-*.src.rpm output
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
+        run: bash tools/submit_copr.sh output/spot-fly-light-*.src.rpm output
       - name: Remove transient RPMs, source downloads and build environments
         if: always()
         shell: bash
         run: |
           find output -type f \( -name '*.rpm' -o -name '*.deb' \) -delete 2>/dev/null || true
-          rm -rf -- "$RUNNER_TEMP"/sonicradle-ci-scan-* "$RUNNER_TEMP"/sonicradle-bootstrap-* "$RUNNER_TEMP"/sonicradle-copr.* "$RUNNER_TEMP"/sonicradle-copr-* "$RUNNER_TEMP"/sonicradle-copr-venv "$RUNNER_TEMP"/spotify-rpm.* /tmp/sonicradle-ci-scan-* /tmp/sonicradle-freshclam.*
+          rm -rf -- "$RUNNER_TEMP"/spot..fly..light-ci-scan-* "$RUNNER_TEMP"/spot..fly..light-bootstrap-* "$RUNNER_TEMP"/spot..fly..light-copr.* "$RUNNER_TEMP"/spot..fly..light-copr-* "$RUNNER_TEMP"/spot..fly..light-copr-venv "$RUNNER_TEMP"/spot..fly..light-rpm.* /tmp/spot..fly..light-ci-scan-* /tmp/spot..fly..light-freshclam.*
           # GitHub tears down this hosted runner VM after the job. This workflow
           # cannot reset the underlying provider VM itself.
       - name: Retain reports and pinned metadata only
         if: always() && steps.version.outputs.needed == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: sonicradle-validation
+          name: spot..fly..light-validation
           retention-days: 14
           if-no-files-found: warn
           path: |
@@ -87,4 +87,4 @@ jobs:
             output/SHA256SUMS
             output/copr-targets.txt
             output/copr-submit.log
-            ${{ runner.temp }}/sonicradle-metadata/source.json
+            ${{ runner.temp }}/spot..fly..light-metadata/source.json

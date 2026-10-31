@@ -24,7 +24,7 @@ def channel_option(args):
 
 
 def active_channel():
-    path = Path('/usr/share/sonicradle-client/.sonicradle-source.json')
+    path = Path('/usr/share/spot..fly..light-client/.spot..fly..light-source.json')
     try:
         channel = json.loads(path.read_text())['Channel']
         if channel not in ('stable', 'unstable'):
@@ -45,7 +45,7 @@ def validate_scan(record):
 
 
 def state_dir():
-    return Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'sonicradle-bootstrap'
+    return Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'spot..fly..light-bootstrap'
 
 
 def consent_digest():
@@ -62,7 +62,7 @@ def approval_subject():
 
 def installed_source():
     try:
-        return json.loads(Path('/usr/share/sonicradle-client/.sonicradle-source.json').read_text())
+        return json.loads(Path('/usr/share/spot..fly..light-client/.spot..fly..light-source.json').read_text())
     except (OSError, ValueError):
         return {}
 
@@ -72,7 +72,7 @@ def installed_current(minimum_release=None):
     installed = installed_source()
     if installed.get('Channel') != subject.get('channel', 'stable') or installed.get('SHA256') != subject['deb_sha256']:
         return False
-    result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', 'sonicradle-client-local'], capture_output=True, text=True)
+    result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', 'spot-fly-light-client-local'], capture_output=True, text=True)
     fields = result.stdout.splitlines()
     if result.returncode or len(fields) != 2 or fields[0] != subject['version']:
         return False
@@ -88,7 +88,7 @@ def pending_install():
         record = json.loads((folder / 'pending-install.json').read_text())
         if record['package'] != subject:
             return None
-        match = re.fullmatch(r'sonicradle-client-local-' + re.escape(subject['version']) + r'-([1-9][0-9]*)[.]x86_64[.]rpm', record['filename'])
+        match = re.fullmatch(re.escape('spot-fly-light-client-local-' + subject['version']) + r'-([1-9][0-9]*)[.]x86_64[.]rpm', record['filename'])
         if not match or int(match[1]) < int(subject['release']):
             return None
         path = folder / record['filename']
@@ -96,7 +96,7 @@ def pending_install():
             return None
         verify(path, record)
         result = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}\\n%{VERSION}\\n%{RELEASE}\\n', str(path)], capture_output=True, text=True)
-        if result.returncode or result.stdout.splitlines() != ['sonicradle-client-local', subject['version'], match[1]]:
+        if result.returncode or result.stdout.splitlines() != ['spot-fly-light-client-local', subject['version'], match[1]]:
             return None
         return path, int(match[1])
     except (OSError, ValueError, KeyError, TypeError):
@@ -130,13 +130,13 @@ def revoke_local_client():
     # Never remove the user's existing LPF/vendor package or the RPM transaction's
     # bootstrap. Only this project's separately named local target is eligible.
     (state_dir() / 'consent.json').unlink(missing_ok=True)
-    installed = subprocess.run(['rpm', '-q', 'sonicradle-client-local'], capture_output=True).returncode == 0
+    installed = subprocess.run(['rpm', '-q', 'spot-fly-light-client-local'], capture_output=True).returncode == 0
     if installed:
         if not shutil.which('pkexec'):
-            raise SystemExit('Consent declined. Client will not launch. Administrator removal required: sudo rpm -e sonicradle-client-local')
-        result = subprocess.run(['pkexec', shutil.which('rpm'), '-e', 'sonicradle-client-local'])
+            raise SystemExit('Consent declined. Client will not launch. Administrator removal required: sudo rpm -e spot-fly-light-client-local')
+        result = subprocess.run(['pkexec', shutil.which('rpm'), '-e', 'spot-fly-light-client-local'])
         if result.returncode:
-            raise SystemExit('Consent declined. Client will not launch. Removal was not authorized or failed; run sudo rpm -e sonicradle-client-local.')
+            raise SystemExit('Consent declined. Client will not launch. Removal was not authorized or failed; run sudo rpm -e spot-fly-light-client-local.')
 
 
 def consent(args):
@@ -144,7 +144,7 @@ def consent(args):
     print(notice, flush=True)
     accepted = '--accept-spotify-terms' in args
     if not accepted and shutil.which('zenity') and (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
-        result = subprocess.run(['zenity', '--text-info', '--title=Spotify: hukuki durum ve yerel kurulum onayı',
+        result = subprocess.run(['zenity', '--text-info', '--title=Spot..Light: hukuki durum ve yerel kurulum onayı',
                                  '--filename=' + str(HERE / 'eula.txt'), '--width=760', '--height=600',
                                  '--checkbox=Bu bildirimi ve geçerli Spotify koşullarını okudum; yerel kurulumu istiyorum.'])
         accepted = result.returncode == 0
@@ -152,9 +152,9 @@ def consent(args):
             revoke_local_client()
             raise SystemExit('Consent declined; download, build and launch cancelled.')
         if not accepted:
-            raise SystemExit('Consent dialog failed; no rejection or package removal inferred. Retry sonicradle --setup.')
+            raise SystemExit('Consent dialog failed; no rejection or package removal inferred. Retry spot..fly..light --setup.')
     if not accepted:
-        raise SystemExit('Review the official terms, then run: sonicradle --setup --accept-spotify-terms')
+        raise SystemExit('Review the official terms, then run: spot..fly..light --setup --accept-spotify-terms')
     directory = state_dir()
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     path = directory / 'consent.json'
@@ -172,9 +172,9 @@ def has_consent():
 
 def transaction_action(path):
     candidate = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}\\n%{VERSION}-%{RELEASE}\\n', str(path)], capture_output=True, text=True, check=True).stdout.splitlines()
-    if len(candidate) != 2 or candidate[0] != 'sonicradle-client-local':
+    if len(candidate) != 2 or candidate[0] != 'spot-fly-light-client-local':
         raise ValueError('Unexpected local RPM identity')
-    installed = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', 'sonicradle-client-local'], capture_output=True, text=True)
+    installed = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', 'spot-fly-light-client-local'], capture_output=True, text=True)
     if installed.returncode:
         return 'install'
     previous, target = installed.stdout.strip(), candidate[1]
@@ -192,8 +192,8 @@ def ensure_client_closed():
             executable = os.readlink(process).removesuffix(' (deleted)')
         except (FileNotFoundError, PermissionError, ProcessLookupError):
             continue
-        if executable.startswith('/usr/share/sonicradle-client/'):
-            raise SystemExit('Close all Sonicradle client processes before replacing the installed client.')
+        if executable.startswith(('/usr/share/spot..fly..light-client/', '/usr/share/sonicradle-client/')):
+            raise SystemExit('Close all Spot..Light client processes before replacing the installed client.')
 
 
 def install_local(path):
@@ -240,8 +240,8 @@ def verify(path, record):
 
 
 def download(record, path):
-    if os.environ.get('SONICRADLE_DEB_FILE'):
-        cached = Path(os.environ['SONICRADLE_DEB_FILE'])
+    if os.environ.get('SPOT_FLY_LIGHT_DEB_FILE'):
+        cached = Path(os.environ['SPOT_FLY_LIGHT_DEB_FILE'])
         verify(cached, record)
         shutil.copy2(cached, path)
         return
@@ -265,9 +265,9 @@ def target_spec(version, release, glibc):
 %global __strip /bin/true
 %global __brp_strip /bin/true
 %global __brp_add_determinism /bin/true
-%global __provides_exclude_from ^%{{_datadir}}/sonicradle-client/.*$
+%global __provides_exclude_from ^%{{_datadir}}/spot[.][.]fly[.][.]light-client/.*$
 %global __requires_exclude ^(libcef|libEGL|libGLESv2|libvk_swiftshader|libvulkan)[.]so.*$
-Name: sonicradle-client-local
+Name: spot-fly-light-client-local
 Version: {version}
 Release: {release}
 Summary: Locally built proprietary Spotify client
@@ -277,7 +277,7 @@ ExclusiveArch: x86_64 x86_64_v2
 Source0: payload.tar.gz
 BuildRequires: coreutils
 BuildRequires: desktop-file-utils
-Requires: sonicradle
+Requires: spot-fly-light
 Requires: glibc >= {glibc}
 Requires: hicolor-icon-theme
 Requires: /usr/bin/dbus-launch
@@ -285,6 +285,8 @@ Requires: /usr/bin/locale
 Requires: (glibc-langpack-en or glibc-locale or locales-en)
 Requires: libayatana-appindicator3.so.1()(64bit)
 Conflicts: spotify-client, spotify-client-local
+# Replace only this project's previously named local target.
+Obsoletes: sonicradle-client-local
 %description
 Built on this computer from Spotify's verified DEB. Not for redistribution.
 %prep
@@ -292,18 +294,51 @@ Built on this computer from Spotify's verified DEB. Not for redistribution.
 %install
 mkdir -p %{{buildroot}}
 cp -a usr %{{buildroot}}/
-find %{{buildroot}}/usr/share/sonicradle-client -type d -exec chmod 0755 {{}} +
-find %{{buildroot}}/usr/share/sonicradle-client -type f -exec chmod go-w {{}} +
-find %{{buildroot}}/usr/share/sonicradle-client -name '*.so*' -type f -exec chmod 0755 {{}} +
-desktop-file-validate %{{buildroot}}/usr/share/applications/sonicradle.desktop
+find %{{buildroot}}/usr/share/spot..fly..light-client -type d -exec chmod 0755 {{}} +
+find %{{buildroot}}/usr/share/spot..fly..light-client -type f -exec chmod go-w {{}} +
+find %{{buildroot}}/usr/share/spot..fly..light-client -name '*.so*' -type f -exec chmod 0755 {{}} +
+desktop-file-validate %{{buildroot}}/usr/share/applications/spot..fly..light.desktop
 %check
-cd %{{buildroot}}/usr/share/sonicradle-client
+cd %{{buildroot}}/usr/share/spot..fly..light-client
 sha256sum --quiet -c .vendor-files.sha256
 %files
-/usr/share/sonicradle-client/
-/usr/share/applications/sonicradle.desktop
-/usr/share/icons/hicolor/*/apps/sonicradle.png
+/usr/share/spot..fly..light-client/
+/usr/share/applications/spot..fly..light.desktop
+/usr/share/icons/hicolor/*/apps/spot..fly..light.png
 '''
+
+
+def next_release(record, output):
+    version = record['RPMVersion']
+    # Preserve the counter across this project's rename, including private rebuilds.
+    state_root = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state')))
+    legacy = state_root / 'sonicradle-bootstrap' / version
+    revisions = [int(record.get('PackagingRelease', 1)) - 1]
+    for directory, name in ((output, 'spot-fly-light'), (legacy, 'sonicradle')):
+        pattern = re.escape(name + '-client-local-' + version) + r'-([1-9][0-9]*)[.]x86_64[.]rpm'
+        revisions.extend(int(match[1]) for path in directory.glob('*.x86_64.rpm')
+                         if (match := re.fullmatch(pattern, path.name)))
+    for name in ('spot-fly-light-client-local', 'sonicradle-client-local'):
+        result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', name], capture_output=True, text=True)
+        fields = result.stdout.splitlines()
+        if result.returncode == 0 and len(fields) == 2 and fields[0] == version:
+            match = re.fullmatch(r'([1-9][0-9]*)(?:[.].*)?', fields[1])
+            if match:
+                revisions.append(int(match[1]))
+    return max(revisions) + 1
+
+
+def user_configuration():
+    root = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config')))
+    flags, assignments = [], []
+    for name, collection in [('flags.conf', flags), ('environment.conf', assignments)]:
+        path = root / 'spot..fly..light' / name
+        if not path.exists():
+            path = root / 'sonicradle' / name
+        if path.is_file():
+            collection.extend(line for line in path.read_text().splitlines()
+                              if line.strip() and not line.lstrip().startswith('#'))
+    return flags, assignments
 
 
 def setup(args):
@@ -333,16 +368,14 @@ def setup(args):
                 print(CURRENT_CHANNEL + ' client is already current.')
             return
         if '--install' in args:
-            raise SystemExit('No verified pending RPM. Run sonicradle --setup to build it.')
+            raise SystemExit('No verified pending RPM. Run spot..fly..light --setup to build it.')
         if '--rebuild' not in args and installed_current():
             print(CURRENT_CHANNEL + ' client is already current.')
             return
         ensure_client_closed()
         (output / 'pending-install.json').unlink(missing_ok=True)
-        existing = [int(m.group(1)) for p in output.glob('*.x86_64.rpm')
-                    if (m := re.fullmatch(re.escape('sonicradle-client-local-' + version) + r'-([0-9]+)[.]x86_64[.]rpm', p.name))]
-        release = max([int(record.get('PackagingRelease', 1)) - 1, *existing]) + 1
-        with tempfile.TemporaryDirectory(prefix='sonicradle-local-') as tmp:
+        release = next_release(record, output)
+        with tempfile.TemporaryDirectory(prefix='spot..fly..light-local-') as tmp:
             work = Path(tmp)
             deb = work / 'spotify.deb'
             download(record, deb)
@@ -357,7 +390,7 @@ def setup(args):
             if actual_version != version:
                 raise ValueError('Unexpected DEB version')
             payload = work / 'payload'
-            app = payload / 'usr/share/sonicradle-client'
+            app = payload / 'usr/share/spot..fly..light-client'
             app.parent.mkdir(parents=True)
             shutil.move(str(root / 'usr/share/spotify'), app)
             manifest = []
@@ -371,17 +404,17 @@ def setup(args):
                     manifest.append(digest + '  ./' + str(file.relative_to(app)))
             (app / '.vendor-files.sha256').write_text('\n'.join(manifest) + '\n')
             shutil.copy2(app / '.vendor-files.sha256', output / 'vendor-files.sha256')
-            (app / '.sonicradle-source.json').write_text(json.dumps(record, indent=2) + '\n')
+            (app / '.spot..fly..light-source.json').write_text(json.dumps(record, indent=2) + '\n')
             for icon in (app / 'icons').glob('spotify-linux-*.png'):
                 size = icon.stem.removeprefix('spotify-linux-')
                 if not size.isdigit():
                     continue
-                dest = payload / f'usr/share/icons/hicolor/{size}x{size}/apps/sonicradle.png'
+                dest = payload / f'usr/share/icons/hicolor/{size}x{size}/apps/spot..fly..light.png'
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(icon, dest)
-            desktop = payload / 'usr/share/applications/sonicradle.desktop'
+            desktop = payload / 'usr/share/applications/spot..fly..light.desktop'
             desktop.parent.mkdir(parents=True)
-            desktop.write_text('[Desktop Entry]\nType=Application\nName=Spotify via Sonicradle (unofficial)\nExec=sonicradle %U\nIcon=sonicradle\nTerminal=false\nCategories=Audio;Music;Player;AudioVideo;\nMimeType=x-scheme-handler/spotify;\nStartupWMClass=spotify\n')
+            desktop.write_text('[Desktop Entry]\nType=Application\nName=Spotify via Spot..Light (unofficial)\nExec=spot..fly..light %U\nIcon=spot..fly..light\nTerminal=false\nCategories=Audio;Music;Player;AudioVideo;\nMimeType=x-scheme-handler/spotify;\nStartupWMClass=spotify\n')
             top = work / 'rpmbuild'
             for folder in ('SOURCES', 'SPECS', 'BUILD', 'RPMS', 'SRPMS'):
                 (top / folder).mkdir(parents=True)
@@ -406,21 +439,16 @@ def setup(args):
 def launch(args):
     global CURRENT_CHANNEL
     if '-unstable' in args or '--unstable' in args:
-        raise SystemExit('Select a channel with sonicradle --setup -unstable or sonicradle --update -unstable.')
+        raise SystemExit('Select a channel with spot..fly..light --setup -unstable or spot..fly..light --update -unstable.')
     CURRENT_CHANNEL = active_channel()
     if not has_consent():
         consent(args)
     if not installed_current():
-        raise SystemExit('The local client is missing or outdated. Run sonicradle --setup to approve, build and install the selected version.')
-    binary = Path('/usr/share/sonicradle-client/spotify')
+        raise SystemExit('The local client is missing or outdated. Run spot..fly..light --setup to approve, build and install the selected version.')
+    binary = Path('/usr/share/spot..fly..light-client/spotify')
     if not binary.is_file():
-        raise SystemExit('Spotify is not built yet. Run sonicradle --setup to review the local-build instructions.')
-    config = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config'))) / 'sonicradle'
-    flags, assignments = [], []
-    for name, collection in [('flags.conf', flags), ('environment.conf', assignments)]:
-        path = config / name
-        if path.is_file():
-            collection.extend(line for line in path.read_text().splitlines() if line.strip() and not line.lstrip().startswith('#'))
+        raise SystemExit('Spotify is not built yet. Run spot..fly..light --setup to review the local-build instructions.')
+    flags, assignments = user_configuration()
     env = os.environ.copy()
     for line in assignments:
         key, sep, value = line.partition('=')
@@ -436,7 +464,9 @@ def launch(args):
             env['LC_NUMERIC'] = 'C.UTF-8'
     for key in ('DESKTOP_SESSION', 'GNOME_DESKTOP_SESSION_ID'):
         env.pop(key, None)
-    mode, debug, forwarded = env.get('SONICRADLE_GPU_MODE', 'auto'), env.get('SONICRADLE_DEBUG', '0'), []
+    mode = env.get('SPOT_FLY_LIGHT_GPU_MODE', env.get('SONICRADLE_GPU_MODE', 'auto'))
+    debug = env.get('SPOT_FLY_LIGHT_DEBUG', env.get('SONICRADLE_DEBUG', '0'))
+    forwarded = []
     for arg in args:
         if arg == '--safe-mode': mode = 'software'
         elif arg.startswith('--gpu-mode='): mode = arg.split('=', 1)[1]
@@ -454,7 +484,10 @@ def launch(args):
     except BlockingIOError:
         raise SystemExit('A local client build or replacement is in progress; retry after it finishes.')
     os.set_inheritable(launch_lock.fileno(), True)
-    os.execve('/bin/bash', ['bash', str(HERE / 'sonicradle-gpu.sh'), str(binary), mode, debug, '0', str(len(flags)), *flags, *forwarded], env)
+    try:
+        os.execve('/bin/bash', ['bash', str(HERE / 'spot..fly..light-gpu.sh'), str(binary), mode, debug, '0', str(len(flags)), *flags, *forwarded], env)
+    finally:
+        launch_lock.close()
 
 
 if __name__ == '__main__':
@@ -463,7 +496,7 @@ if __name__ == '__main__':
         elif '--status' in sys.argv[1:]:
             CURRENT_CHANNEL = active_channel()
             print(CURRENT_CHANNEL + ': ' + package_state())
-        elif '--help' in sys.argv[1:]: print('sonicradle [--setup | --update | --install | --rebuild] [-unstable] [--accept-spotify-terms] [--status] [--debug] [--safe-mode] [--gpu-mode=MODE] [URI]')
+        elif '--help' in sys.argv[1:]: print('spot..fly..light [--setup | --update | --install | --rebuild] [-unstable] [--accept-spotify-terms] [--status] [--debug] [--safe-mode] [--gpu-mode=MODE] [URI]')
         else: launch(sys.argv[1:])
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
-        raise SystemExit('sonicradle: ' + str(exc))
+        raise SystemExit('spot..fly..light: ' + str(exc))

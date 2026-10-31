@@ -1,20 +1,23 @@
-# Sonicradle: origin, purpose and operation
+# Spot..Light: origin, purpose and operation
 
-Sonicradle is an independent community installer and launcher for the official
+Spot..Light is an independent community installer and launcher for the official
 Spotify Linux desktop application. It is maintained in
 [universish/spotify-client..copr..ci](https://github.com/universish/spotify-client..copr..ci),
 a fork of [zicstardust/spotify-rpm-packager](https://github.com/zicstardust/spotify-rpm-packager).
 The historical repository and COPR identifiers have been retained for continuity;
-the new public package and terminal command are `sonicradle`.
+the new public RPM package is `spot-fly-light` and its terminal command is
+`spot..fly..light`. RPM names cannot contain `..`, so the package uses hyphens.
 
 This project is not affiliated with, approved by or supported by Spotify. COPR
 hosting does not make it an official Fedora or Red Hat package. The choice of a
 new project name is not a claim of completed trademark clearance.
 
-The current Sonicradle bootstrap was delivered by COPR build 11231606 and
-verified against its Actions provenance. The validation record contains the
-package, scan and legacy-host cleanup evidence. The earlier `spotify` RPM
-does not contain the new `sonicradle` command.
+The Spot..Light rename is implemented in source and awaits verified COPR delivery.
+The preceding Sonicradle bootstrap was delivered by COPR build 11231606 and
+verified against its Actions provenance. Those package/scan records remain
+historical evidence; neither that package nor the earlier `spotify` RPM
+contains the new `spot..fly..light` command. The validation record keeps the original
+artifact names and hashes unchanged.
 
 ## Why this fork changed
 
@@ -61,8 +64,8 @@ every reported display problem.
 
 | Package | Location | Contents |
 | --- | --- | --- |
-| `sonicradle` | COPR | Community launcher, local packaging helpers, source metadata and notices; no Spotify executable, logo or application archive |
-| `sonicradle-client-local` | Built on the user's computer | The verified official application and local integration; subject to Spotify and bundled third-party terms |
+| `spot-fly-light` | COPR | Community launcher, local packaging helpers, source metadata and notices; no Spotify executable, logo or application archive |
+| `spot-fly-light-client-local` | Built on the user's computer | The verified official application and local integration; subject to Spotify and bundled third-party terms |
 
 Keep the generated client RPM private. The project's MIT grant for its new
 helpers does not license the Spotify application or all inherited source files.
@@ -104,8 +107,8 @@ package or the user's configuration.
 
 ```sh
 sudo dnf copr enable universish/Spotify..Client
-sudo dnf install sonicradle
-sonicradle --setup
+sudo dnf install spot-fly-light
+spot..fly..light --setup
 ```
 
 Run setup as your normal desktop user. Review the displayed notice and Spotify's
@@ -117,17 +120,17 @@ of an already installed local target also requires system authorization.
 To choose testing for installation, use this instead of the last command:
 
 ```sh
-sonicradle --setup -unstable
+spot..fly..light --setup -unstable
 ```
 
-`-unstable` is an option of Sonicradle. It is not a DNF option, a second package
-name or a separate executable. Both channels install `sonicradle-client-local`.
+`-unstable` is an option of Spot..Light. It is not a DNF option, a second package
+name or a separate executable. Both channels install `spot-fly-light-client-local`.
 The vendor application retains its own name and ownership.
 
 After setup, start the application with:
 
 ```sh
-sonicradle
+spot..fly..light
 ```
 
 ## Refresh, update and switch channels
@@ -137,48 +140,66 @@ update the client:
 
 ```sh
 sudo dnf makecache --refresh
-sudo dnf upgrade --refresh sonicradle
-sonicradle --update
+sudo dnf upgrade --refresh spot-fly-light
+spot..fly..light --update
 ```
 
 Without `-unstable`, setup/update selects stable even if testing was installed.
 Returning to stable can be a version downgrade. To install/update to testing:
 
 ```sh
-sonicradle --update -unstable
+spot..fly..light --update -unstable
 ```
 
 The same target identity replaces the previous channel; stable and testing are
-not installed side by side. Launching `sonicradle` runs the installed selection;
+not installed side by side. Launching `spot..fly..light` runs the installed selection;
 it does not silently switch channels at each launch. Neither setup nor an update
 is permission to share the generated proprietary client RPM.
 
 ```sh
-sonicradle --status
-sonicradle --install
-sonicradle --rebuild
-sonicradle --debug
-sonicradle --safe-mode
+spot..fly..light --status
+spot..fly..light --install
+spot..fly..light --rebuild
+spot..fly..light --debug
+spot..fly..light --safe-mode
 ```
 
 `--install` retries a verified pending RPM, and `--rebuild` requests a new local
 verified download/build. It does not run ClamAV on the user host. Use the same explicit channel option when operating on testing.
-Local verification/build records and cache files remain in the user's `${XDG_STATE_HOME:-$HOME/.local/state}/sonicradle-bootstrap/<version>/`
+Local verification/build records and cache files remain in the user's `${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/<version>/`
 directory; CI scan logs are separate workflow evidence. Review relevant
 records before deleting them.
+
+## Migration from the previous community name
+
+The new bootstrap/target use RPM replacement metadata for this project's known
+former packages, `sonicradle` and `sonicradle-client-local`. This does not give
+the installer permission to silently remove an existing LPF, `spotify-client`
+or other vendor installation. Review the DNF transaction before accepting a
+migration; stop and resolve a conflicting vendor package explicitly.
+
+The current configuration directory is `~/.config/spot..fly..light/`; the files are
+`flags.conf` and `environment.conf`. Do not discard old preferences or evidence
+when changing names. Current environment overrides are `SPOT_FLY_LIGHT_GPU_MODE` and
+`SPOT_FLY_LIGHT_DEBUG`. For each configuration file, the launcher reads the old
+`~/.config/sonicradle/` file only when the corresponding new file is absent.
+It leaves those files in place; this fallback does not migrate consent. A new
+local build also considers this project's same-version legacy cache and
+installed legacy target when choosing its next packaging revision. Vendor
+application data keeps the vendor's original identity.
 
 ## Removal and repository management
 
 Remove just the generated client:
 
 ```sh
-sudo dnf remove sonicradle-client-local
+sudo dnf remove spot-fly-light-client-local
 ```
 
 Remove both this project's packages:
 
 ```sh
-sudo dnf remove sonicradle-client-local sonicradle
+sudo dnf remove spot-fly-light-client-local spot-fly-light
 ```
 
 Disable future downloads from the COPR repository:

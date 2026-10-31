@@ -1,4 +1,4 @@
-SONICRADLE — SPOTIFY YEREL KURULUM HUKUKİ BİLDİRİMİ
+Spot..Light — SPOTIFY YEREL KURULUM HUKUKİ BİLDİRİMİ
 
 Bu, Spotify tarafından onaylanmış bir paket değildir. Kurucu RPM Spotify
 uygulamasını içermez. Onay verirseniz resmî DEB kendi bilgisayarınıza indirilir,
@@ -16,7 +16,7 @@ Tarama bilinmeyen bütün tehditleri dışlayamaz. Kendi kullanımınız, hesab�
 yedekleriniz ve koşullara uyumunuz sizin sorumluluğunuzdadır. Bu onay bakımcının
 kendi yükümlülüklerini kaldırmaz; zorunlu haklarınızdan feragat anlamına gelmez.
 
-Reddederseniz indirme, paketleme ve çalıştırma durur. Bizim sonicradle-client-local
+Reddederseniz indirme, paketleme ve çalıştırma durur. Bizim spot-fly-light-client-local
 paketimiz kuruluysa sistem yetkilendirmesiyle kaldırılması istenir. Yetki
 verilmezse veya işlem başarısızsa paket kurulu kalabilir; başlatıcı yine onu
 çalıştırmaz. Mevcut LPF/vendor paketiniz otomatik kaldırılmaz. Küçük kurucu RPM
@@ -24,7 +24,7 @@ ayrıca paket yöneticinizle kaldırılabilir.
 
 Aşağıda ayrıntılı topluluk bildirimi ve sorumluluk reddi bulunur.
 
-SONICRADLE — SPOTIFY LOCAL INSTALLATION LEGAL NOTICE
+Spot..Light — SPOTIFY LOCAL INSTALLATION LEGAL NOTICE
 
 This is not a package approved by Spotify. The installer RPM does not contain the Spotify
 application. If you give your consent, the official DEB file will be downloaded to your computer,
@@ -42,7 +42,7 @@ Scanning cannot rule out all unknown threats. Your use, account,
 backups, and compliance with the terms are your responsibility. This acknowledgment does not
 relieve the maintainer of their own liabilities; it does not constitute a waiver of your statutory rights.
 
-If you decline, the download, packaging, and execution will stop. If our sonicradle-client-local
+If you decline, the download, packaging, and execution will stop. If our spot-fly-light-client-local
 package is installed, system authorization is required for its removal. If
 authorization is not granted or the operation fails, the package may remain installed; the launcher will still not
 run it. Your existing LPF/vendor package will not be automatically removed. The small installer RPM
@@ -85,7 +85,7 @@ Requesting the local installation confirms that you have reviewed this notice
 and Spotify's applicable terms. You are responsible for your own use and
 compliance. See DISCLAIMER.txt for the community packaging disclaimer. Consent
 does not waive mandatory rights or remove the maintainer's own obligations.
-Declining cancels download/build/launch; an installed sonicradle-client-local
+Declining cancels download/build/launch; an installed spot-fly-light-client-local
 package is submitted for removal through system authorization. Authorization
 failure can prevent removal; this launcher will still refuse to run it.
 
@@ -111,20 +111,20 @@ permission to host proprietary Spotify binaries. Clicking consent is a request
 to proceed under the applicable terms, not a universal release from liability.
 
 If you decline, the bootstrap does not download/build or launch the client.
-If this project's sonicradle-client-local package is installed, it requests its
+If this project's spot-fly-light-client-local package is installed, it requests its
 removal through the system authorization dialog. If permission is denied or
 removal fails, the client remains installed but this launcher refuses to run it.
 Existing LPF/vendor packages are not silently removed. The small payload-free
 bootstrap itself can be removed through your system package manager.
 
-CURRENT NAMING AND HOSTING NOTICE — 2026-10-30
+CURRENT NAMING AND HOSTING NOTICE — 2026-10-31
 
-Sonicradle is the independent community installer and launcher. The public
-bootstrap RPM and command are named sonicradle. The locally generated target
-is named sonicradle-client-local. Spotify remains the name of the original
-third-party application; Sonicradle does not rename that application's ownership.
+Spot..Light is the independent community installer and launcher. The public
+bootstrap RPM is named spot-fly-light and its command is spot..fly..light.
+The locally generated target is named spot-fly-light-client-local. Spotify remains the name of the original
+third-party application; Spot..Light does not rename that application's ownership.
 The historical repository/COPR identifiers identify compatibility and project
-provenance, not Spotify or Fedora sponsorship. The name Sonicradle is not a
+provenance, not Spotify or Fedora sponsorship. The name Spot..Light is not a
 representation that a trademark search or registration has been completed.
 
 COPR hosts only the freely licensed bootstrap. This workflow does not publish
@@ -152,3 +152,12 @@ separately. The bootstrap contains a scan record bound to the official source
 hash. Your computer downloads the same DEB and checks its size and SHA256
 before unpacking and building the client. It does not run ClamAV. CI scan
 results do not guarantee absence of unknown threats or future vulnerabilities.
+
+PREVIOUS COMMUNITY PACKAGE NAMES
+
+Spot..Light is the current name of this project's independent helper. RPM
+replacement metadata applies only to this project's previous sonicradle and
+sonicradle-client-local packages. Existing LPF, spotify-client or other vendor
+packages are not silently removed. Review any proposed package-manager
+transaction before authorizing it. Earlier names remain in historical source
+and timestamp records; they do not identify additional current commands.

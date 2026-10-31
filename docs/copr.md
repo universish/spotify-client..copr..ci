@@ -3,8 +3,9 @@
 Project: https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/
 
 The historical project identifier remains descriptive. The independent community
-package and command are `sonicradle`; the local client package is
-`sonicradle-client-local`. This is not an official Spotify/Fedora/Red Hat project.
+RPM package is `spot-fly-light` and its command is `spot..fly..light`;
+the local client package is
+`spot-fly-light-client-local`. This is not an official Spotify/Fedora/Red Hat project.
 For the paste-ready Description/Installation text, use
 [copr-description.md](copr-description.md).
 

@@ -71,7 +71,7 @@ class CIScanTests(unittest.TestCase):
 class WorkflowContractTests(unittest.TestCase):
     def test_offline_copr_make_refuses_implicit_download_or_unscanned_input(self):
         result = subprocess.run(['make', '-f', '.copr/Makefile', 'srpm'], cwd=REPO,
-                                env=dict(__import__('os').environ, SCANNED_METADATA='', SONICRADLE_RELEASE=''),
+                                env=dict(__import__('os').environ, SCANNED_METADATA='', SPOT_FLY_LIGHT_RELEASE=''),
                                 text=True, capture_output=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Use the GitHub Actions workflow', result.stderr)
@@ -90,7 +90,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn('if: always()', workflow)
         scan_step = workflow.split('      - name: Download, verify, extract and scan upstream DEBs in this runner', 1)[1].split('      - name:', 1)[0]
         self.assertIn('TMPDIR: /tmp', scan_step)
-        self.assertIn('/tmp/sonicradle-ci-scan-* /tmp/sonicradle-freshclam.*', workflow)
+        self.assertIn('/tmp/spot..fly..light-ci-scan-* /tmp/spot..fly..light-freshclam.*', workflow)
         self.assertLess(workflow.index('tools/scan_sources.py'), workflow.index('tools/build_bootstrap.py'))
 
 

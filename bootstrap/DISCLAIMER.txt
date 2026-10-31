@@ -20,13 +20,14 @@ permission to host proprietary Spotify binaries. Clicking consent is a request
 to proceed under the applicable terms, not a universal release from liability.
 
 If you decline, the bootstrap does not download/build or launch the client.
-If this project's sonicradle-client-local package is installed, it requests its
+If this project's spot-fly-light-client-local package is installed, it requests its
 removal through the system authorization dialog. If permission is denied or
 removal fails, the client remains installed but this launcher refuses to run it.
 Existing LPF/vendor packages are not silently removed. The small payload-free
 bootstrap itself can be removed through your system package manager.
 
-Sonicradle is the current community project/package/command name. The public
+Spot..Light is the community project name; spot-fly-light is its RPM package
+and spot..fly..light is its terminal command. The public
 bootstrap contains no proprietary client. COPR hosting is infrastructure, not
 a transfer of the maintainer's responsibilities or an endorsement by Fedora,
 Red Hat or Spotify. This active disclaimer updates historical names in the

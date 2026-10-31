@@ -5,11 +5,11 @@ source_rpm=${1:?Usage: submit_copr.sh SOURCE_RPM OUTPUT_DIRECTORY}
 output=${2:-output}
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 : "${COPR_CONFIG:?COPR_CONFIG repository secret is required for automatic submission}"
-: "${SONICRADLE_VERSION:?Expected bootstrap version is required}"
-: "${SONICRADLE_RELEASE:?Reserved packaging number is required}"
-[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "sonicradle $SONICRADLE_VERSION-$SONICRADLE_RELEASE" ]]
+: "${SPOT_FLY_LIGHT_VERSION:?Expected bootstrap version is required}"
+: "${SPOT_FLY_LIGHT_RELEASE:?Reserved packaging number is required}"
+[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "spot-fly-light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" ]]
 mkdir -p "$output"
-work=$(mktemp -d "${TMPDIR:-/tmp}/sonicradle-copr.XXXXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/spot..fly..light-copr.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 umask 077
 printf '%s\n' "$COPR_CONFIG" > "$work/copr.conf"

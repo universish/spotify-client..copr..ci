@@ -18,7 +18,7 @@ REPO = Path(__file__).resolve().parents[1]
 def scan(metadata_path, report_dir, run_url):
     if not re.fullmatch(r'https://github[.]com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/[0-9]+', run_url):
         raise ValueError('A GitHub Actions run URL is required for scan provenance')
-    spec = importlib.util.spec_from_file_location('sonicradle_ci', REPO / 'bootstrap/sonicradle.py')
+    spec = importlib.util.spec_from_file_location('spot_fly_light_ci', REPO / 'bootstrap/spot..fly..light.py')
     bootstrap = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(bootstrap)
     records = {channel: bootstrap.metadata(metadata_path, channel) for channel in ('stable', 'unstable')}
@@ -26,7 +26,7 @@ def scan(metadata_path, report_dir, run_url):
     report_dir.mkdir(parents=True, exist_ok=True)
     # Private CI temp data is removed on success, a detection, any subprocess error,
     # and Python exceptions. The workflow also has an always() cleanup step.
-    with tempfile.TemporaryDirectory(prefix='sonicradle-ci-scan-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='spot..fly..light-ci-scan-') as temporary:
         work = Path(temporary)
         env = dict(os.environ, CLAMAV_DATABASE_DIR=str(work / 'database'),
                    SCAN_REPORT_DIR=str(report_dir / 'database'))

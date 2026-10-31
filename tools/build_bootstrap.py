@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 def build(record_path, output, release, unstable_path=None):
-    module_spec = importlib.util.spec_from_file_location('bootstrap', REPO / 'bootstrap/sonicradle.py')
+    module_spec = importlib.util.spec_from_file_location('bootstrap', REPO / 'bootstrap/spot..fly..light.py')
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
     raw = json.loads(Path(record_path).read_text())
@@ -38,7 +38,7 @@ def build(record_path, output, release, unstable_path=None):
     version = record['RPMVersion']
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='sonicradle-bootstrap-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='spot..fly..light-bootstrap-') as tmp:
         top = Path(tmp)
         for directory in ('BUILD', 'SOURCES', 'SPECS', 'RPMS', 'SRPMS'):
             (top / directory).mkdir()
@@ -46,8 +46,8 @@ def build(record_path, output, release, unstable_path=None):
         root.mkdir()
         # Explicit allowlist: never copy output/, DEBs, vendor icons, archives or app code.
         files = {
-            'bootstrap/sonicradle.py': 'sonicradle.py',
-            'src/spotify-gpu.sh': 'sonicradle-gpu.sh',
+            'bootstrap/spot..fly..light.py': 'spot..fly..light.py',
+            'src/spotify-gpu.sh': 'spot..fly..light-gpu.sh',
             'bootstrap/NOTICE.txt': 'eula.txt',
             'bootstrap/DISCLAIMER.txt': 'DISCLAIMER.txt',
             'COPYRIGHT': 'COPYRIGHT',
@@ -58,13 +58,15 @@ def build(record_path, output, release, unstable_path=None):
         (root / 'source.json').write_text(json.dumps(channels, indent=2) + '\n')
         with tarfile.open(top / 'SOURCES/bootstrap.tar.gz', 'w:gz') as archive:
             archive.add(root, arcname='bootstrap')
-        spec = top / 'SPECS/sonicradle.spec'
+        spec = top / 'SPECS/spot-fly-light.spec'
         spec.write_text(f'''%global debug_package %{{nil}}
-Name: sonicradle
+Name: spot-fly-light
 Version: {version}
 Release: {release}%{{?dist}}
 Summary: Independent local client packaging helper
 License: MIT
+Obsoletes: sonicradle
+Provides: sonicradle = {version}-{release}%{{?dist}}
 URL: https://github.com/universish/spotify-client..copr..ci
 ExclusiveArch: x86_64 x86_64_v2
 Source0: bootstrap.tar.gz
@@ -81,19 +83,19 @@ Requires: /usr/bin/pkexec
 %description
 Contains only independently authored packaging helpers and source metadata.
 No Spotify application, icons or proprietary archives are included. Run
-sonicradle --setup to review the terms and explicitly request a local client build.
+spot..fly..light --setup to review the terms and explicitly request a local client build.
 %prep
 %setup -q -n bootstrap
 %install
-mkdir -p %{{buildroot}}/usr/share/sonicradle-bootstrap %{{buildroot}}/usr/bin
-cp -a * %{{buildroot}}/usr/share/sonicradle-bootstrap/
-printf '#!/bin/bash\\nexec /usr/bin/python3 /usr/share/sonicradle-bootstrap/sonicradle.py "$@"\\n' > %{{buildroot}}/usr/bin/sonicradle
-chmod 0755 %{{buildroot}}/usr/bin/sonicradle
+mkdir -p %{{buildroot}}/usr/share/spot..fly..light-bootstrap %{{buildroot}}/usr/bin
+cp -a * %{{buildroot}}/usr/share/spot..fly..light-bootstrap/
+printf '#!/bin/bash\\nexec /usr/bin/python3 /usr/share/spot..fly..light-bootstrap/spot..fly..light.py "$@"\\n' > %{{buildroot}}/usr/bin/spot..fly..light
+chmod 0755 %{{buildroot}}/usr/bin/spot..fly..light
 %files
 %license MIT-new-contributions.txt
 %doc eula.txt DISCLAIMER.txt COPYRIGHT
-/usr/bin/sonicradle
-/usr/share/sonicradle-bootstrap/
+/usr/bin/spot..fly..light
+/usr/share/spot..fly..light-bootstrap/
 ''')
         subprocess.run(['rpmbuild', '-bs', '--define', f'_topdir {top}', '--define', 'dist %{nil}', str(spec)], check=True)
         for rpm in (top / 'SRPMS').glob('*.rpm'):
@@ -104,7 +106,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('metadata')
     parser.add_argument('output')
-    parser.add_argument('--release', default=os.environ.get('SONICRADLE_RELEASE', os.environ.get('SPOTIFY_RELEASE', '1')))
+    parser.add_argument('--release', default=os.environ.get('SPOT_FLY_LIGHT_RELEASE', '1'))
     parser.add_argument('--unstable-metadata', help='Optional separately pinned unstable DEB record')
     args = parser.parse_args()
     build(args.metadata, args.output, args.release, args.unstable_metadata)

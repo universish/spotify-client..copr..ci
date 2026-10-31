@@ -1,7 +1,12 @@
-# Sonicradle — yerel RPM kurucusu — universish
+# Spot..Light — yerel RPM kurucusu — universish
 
-> Sonicradle `1.2.95.453.g0eeebbed-6`, COPR derlemesi `11231606` ile
-> yayımlandı. Eski `spotify` kurucusu yeni komutları içermez.
+Proje adı **Spot..Light**, RPM paketi **`spot-fly-light`**, terminal komutu
+**`spot..fly..light`**. RPM paket adlarında `..` kullanılamadığı için paket adı
+tirelerle yazılır; terminal komutu seçtiğiniz biçimi korur.
+
+> Spot..Light ad değişikliğinin kaynak kodu hazırlanıyor; yeni COPR yayını henüz
+> doğrulanmadı. Önceki Sonicradle `1.2.95.453.g0eeebbed-6` yayını, COPR derlemesi
+> `11231606` ile doğrulanmış tarihsel kayıttır. Eski paketler `spot..fly..light` komutunu içermez.
 
 **İndirmeden ve kurmadan önce okuyun:** COPR RPM'si küçük bir topluluk
 kurucusudur. Spotify uygulamasını, logosunu veya özel mülk ikililerini içermez.
@@ -24,16 +29,16 @@ COPR'dan yayımlanan kurucuyu kurmak için:
 
 ```sh
 sudo dnf copr enable universish/Spotify..Client
-sudo dnf install sonicradle
-sonicradle --setup
+sudo dnf install spot-fly-light
+spot..fly..light --setup
 ```
 
 Grafik oturumda hukuki metni ve onay kutusunu gösteren Zenity penceresi açılır.
-Onay verirseniz DEB indirilir ve CI tarama kaydındaki SHA256 ile doğrulanır; yerel `sonicradle-client-local`
+Onay verirseniz DEB indirilir ve CI tarama kaydındaki SHA256 ile doğrulanır; yerel `spot-fly-light-client-local`
 RPM'si üretilir. Ardından sistem yetkilendirmesiyle paket yöneticisi açılır.
 Yönetici yetkisi yalnızca son kurulum/kaldırma işlemi için kullanılır.
 
-Reddederseniz indirme, derleme ve çalıştırma durur. Bizim `sonicradle-client-local`
+Reddederseniz indirme, derleme ve çalıştırma durur. Bizim `spot-fly-light-client-local`
 paketimiz zaten kuruluysa kaldırılması için sistem yetkilendirmesi istenir.
 Yetki verilmezse veya kaldırma başarısızsa otomatik silindiği iddia edilmez;
 bu başlatıcı yine çalıştırmayı reddeder. Mevcut LPF/vendor paketleri otomatik
@@ -42,13 +47,13 @@ kaldırılmaz. Küçük kurucu RPM'yi paket yöneticinizle ayrıca kaldırabilir
 DNF/RPM işlemi sırasında grafik onay istenmez: kurucu kurulabilir, **asıl Spotify
 istemcisi için onay sonraki adımdadır**. Koşul bildirimi değişirse yeniden onay
 istenir. Onay kaydı kullanıcıya özeldir. Grafik oturumu olmayan kullanıcı metni
-inceledikten sonra açıkça `sonicradle --setup --accept-spotify-terms` çalıştırabilir.
+inceledikten sonra açıkça `spot..fly..light --setup --accept-spotify-terms` çalıştırabilir.
 
 ```sh
-sonicradle
-sonicradle --debug
-sonicradle --safe-mode
-sonicradle --gpu-mode=native
+spot..fly..light
+spot..fly..light --debug
+spot..fly..light --safe-mode
+spot..fly..light --gpu-mode=native
 ```
 
 ## Yerel istemci üretimi
@@ -59,11 +64,11 @@ sonicradle --gpu-mode=native
 4. Kurucuya kaynak SHA256 değerine bağlı tarama kaydı eklenir; DEB kurucuya eklenmez.
 5. Kullanıcı bilgisayarında aynı DEB indirilip boyutu/SHA256 değeri doğrulanır;
    ClamAV kurulmaz veya çalıştırılmaz. Debian kurulum betikleri çalıştırılmadan açılır.
-6. LPF gibi uygulama ağacı `/usr/share/sonicradle-client/` altında eksiksiz tutulur.
+6. LPF gibi uygulama ağacı `/usr/share/spot..fly..light-client/` altında eksiksiz tutulur.
    RPM `%check` aşaması özgün dosyaların SHA256 değerlerini yeniden doğrular.
 7. Yerel RPM oluşturulur ve sistem yetkilendirmesiyle kurulması istenir.
 
-Yerel doğrulama/derleme kayıtları `${XDG_STATE_HOME:-$HOME/.local/state}/sonicradle-bootstrap/<sürüm>/`
+Yerel doğrulama/derleme kayıtları `${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/<sürüm>/`
 altındadır; ClamAV raporları Actions üzerinde tutulur.
 Tarama bilinmeyen bütün tehditlerin yokluğunu kanıtlamaz. Onay, yerel indirme ve paketleme
 kullanıcı yetkisiyle yapılır; kurucu RPM scriptlet'leri Spotify indirmez/çalıştırmaz.
@@ -71,7 +76,7 @@ kullanıcı yetkisiyle yapılır; kurucu RPM scriptlet'leri Spotify indirmez/ça
 NVIDIA desktop GL profili çalışan LPF ayarlarını izler; desteklenen hibrit GPU'da
 PRIME uygulanır. AMD/Intel/Nouveau'ya NVIDIA değişkenleri eklenmez. Erken grafik
 hatasında sınırlı ANGLE/yazılım geri dönüşü vardır. Ozone/DPI zorlanmaz.
-Kullanıcı `sonicradle/flags.conf` ve `sonicradle/environment.conf` dosyaları korunur; ortam dosyası
+Kullanıcı `spot..fly..light/flags.conf` ve `spot..fly..light/environment.conf` dosyaları korunur; ortam dosyası
 kabuk kodu olarak çalıştırılmaz. [GPU ayrıntıları](docs/gpu-launcher.md).
 
 ## Otomasyon
@@ -113,10 +118,15 @@ için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.
 
 ----
 
-# Sonicradle Local RPM Installer — universish
+# Spot..Light Local RPM Installer — universish
 
-> Sonicradle `1.2.95.453.g0eeebbed-6` was delivered by COPR build `11231606`.
-> The older `spotify` bootstrap does not contain the commands below.
+The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
+and its terminal command is **`spot..fly..light`**. RPM package names cannot
+contain `..`, so the package uses hyphens while the command keeps the chosen spelling.
+
+> The Spot..Light rename is being prepared in source; its new COPR publication has
+> not yet been verified. Sonicradle `1.2.95.453.g0eeebbed-6`, delivered by COPR
+> build `11231606`, is historical evidence. Older packages do not contain `spot..fly..light`.
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.
@@ -139,16 +149,16 @@ To install the installer published via COPR:
 
 ```sh
 sudo dnf copr enable universish/Spotify..Client
-sudo dnf install sonicradle
-sonicradle --setup
+sudo dnf install spot-fly-light
+spot..fly..light --setup
 ```
 
 In a graphical session, a Zenity window opens displaying the legal text and a checkbox.
-If you agree, the DEB file is downloaded and verified against the CI-scanned source hash; the local `sonicradle-client-local`
+If you agree, the DEB file is downloaded and verified against the CI-scanned source hash; the local `spot-fly-light-client-local`
 RPM is built. The package manager then opens with system privileges.
 Administrator privileges are used only for the final installation/uninstallation process.
 
-If you decline, the download, build, and execution will stop. If our `sonicradle-client-local`
+If you decline, the download, build, and execution will stop. If our `spot-fly-light-client-local`
 package is already installed, system authorization is requested for its removal.
 If authorization is not granted or the removal fails, it is not assumed to have been automatically deleted;
 this launcher will again refuse to run. Existing LPF/vendor packages are not automatically
@@ -157,13 +167,13 @@ removed. You can remove the small installer RPM separately using your package ma
 No graphical confirmation is requested during the DNF/RPM process: the installer can be installed, **but confirmation for the actual Spotify
 client comes in the next step**. If the terms of service change, confirmation
 will be requested again. The confirmation record is user-specific. A user without a graphical session can
-run `sonicradle --setup --accept-spotify-terms` explicitly after reviewing the text.
+run `spot..fly..light --setup --accept-spotify-terms` explicitly after reviewing the text.
 
 ```sh
-sonicradle
-sonicradle --debug
-sonicradle --safe-mode
-sonicradle --gpu-mode=native
+spot..fly..light
+spot..fly..light --debug
+spot..fly..light --safe-mode
+spot..fly..light --gpu-mode=native
 ```
 
 ## Local Client Build
@@ -174,11 +184,11 @@ sonicradle --gpu-mode=native
 4. The payload-free bootstrap records the source SHA256 and CI scan result, not the application.
 5. On your computer, the same DEB is downloaded, its size/hash checked and its contents extracted
    without running Debian scripts. ClamAV is neither installed nor run on your computer.
-6. The application tree, such as LPF, is kept intact under `/usr/share/sonicradle-client/`.
+6. The application tree, such as LPF, is kept intact under `/usr/share/spot..fly..light-client/`.
    The RPM `%check` phase re-verifies the SHA256 values of the original files.
 7. A local RPM is created, and installation with system privileges is requested.
 
-Local verification/build records are under `${XDG_STATE_HOME:-$HOME/.local/state}/sonicradle-bootstrap/<version>/`.
+Local verification/build records are under `${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/<version>/`.
 ClamAV scan reports are retained in Actions instead.
 Scanning does not guarantee the absence of all unknown threats. Approval, local download and packaging
 are performed as the requesting user; the installer’s RPM scriptlets do not download or run Spotify.
@@ -186,7 +196,7 @@ are performed as the requesting user; the installer’s RPM scriptlets do not do
 The NVIDIA desktop GL profile tracks active LPF settings; PRIME is applied
 on supported hybrid GPUs. NVIDIA variables are not added to AMD/Intel/Nouveau. In the event of an early graphics
 error, there is limited ANGLE/software fallback. Ozone/DPI is not forced.
-User `sonicradle/flags.conf` and `sonicradle/environment.conf` files are preserved; the environment file
+User `spot..fly..light/flags.conf` and `spot..fly..light/environment.conf` files are preserved; the environment file
 is not executed as shell code. [GPU details](docs/gpu-launcher.md).
 
 ## Automation
@@ -234,9 +244,9 @@ Translated with DeepL.com (free version)
 ## Kurucu durum ve yeniden deneme / Installer state and retry
 
 ```sh
-sonicradle --status
-sonicradle --install
-sonicradle --rebuild
+spot..fly..light --status
+spot..fly..light --install
+spot..fly..light --rebuild
 ```
 
 `--status` onay, derleme veya kurulum bekleme durumunu gösterir. `--install`,
@@ -254,26 +264,26 @@ bildirim servisi dahil mimari farklar [LPF karşılaştırmasında](docs/lpf-fra
 açıklanır. This standalone installer does not use the actual LPF framework;
 see the linked comparison for the account/lifecycle/notification differences.
 
-## Sonicradle: stable / testing channel operations
+## Spot..Light: stable / testing channel operations
 
 ```sh
-sonicradle --setup
-sonicradle --setup -unstable
-sudo dnf upgrade --refresh sonicradle
-sonicradle --update
-sonicradle --update -unstable
-sudo dnf remove sonicradle-client-local sonicradle
+spot..fly..light --setup
+spot..fly..light --setup -unstable
+sudo dnf upgrade --refresh spot-fly-light
+spot..fly..light --update
+spot..fly..light --update -unstable
+sudo dnf remove spot-fly-light-client-local spot-fly-light
 sudo dnf copr disable universish/Spotify..Client
 ```
 
-`-unstable` is a Sonicradle option, not a DNF option or a second package name.
+`-unstable` is a Spot..Light option, not a DNF option or a second package name.
 Setup/update without it selects stable, including a switch from testing back to
 stable; that can install an older vendor version. Both channels replace the
-same local target, so there is one installed client. Launching `sonicradle` runs
+same local target, so there is one installed client. Launching `spot..fly..light` runs
 the installed selection. Run setup/update without sudo. If an LPF/vendor client
 is already installed, review migration first rather than assuming coexistence.
 
-`-unstable`, Sonicradle seçeneğidir; DNF seçeneği veya ayrı paket adı değildir.
+`-unstable`, Spot..Light seçeneğidir; DNF seçeneği veya ayrı paket adı değildir.
 Eki kullanmadan kurulum/güncelleme stable seçer; testing'den dönüş sürümü
 düşürebilir. İki kanal aynı yerel paketin yerine geçer; aynı anda iki istemci
 kurulmaz. Mevcut LPF/vendor kurulumundan geçiş ayrıca incelenmelidir.
@@ -284,3 +294,25 @@ Read the English [project history and operating guide](docs/project-history-and-
 does not transfer responsibility to Fedora. The root notice/license files in
 the original timestamp manifest remain historical evidence; active installation
 notices are in `bootstrap/NOTICE.txt` and `bootstrap/DISCLAIMER.txt`.
+
+## Spot..Light ad geçişi / Naming transition
+
+Spot..Light, topluluk kurucusunun yeni adıdır. Önceki kendi paketlerimiz
+`sonicradle` ve `sonicradle-client-local` için RPM değiştirme metaverisi vardır;
+yerine geçme kapsamı bu paketlerle sınırlıdır. Mevcut `spotify-client`, LPF veya
+başka sağlayıcı paketleri sessizce kaldırılmaz. DNF işlemini onaylamadan önce
+önerilen değişiklikleri inceleyin. Yeni ayarlar `~/.config/spot..fly..light/flags.conf` ve
+`~/.config/spot..fly..light/environment.conf` altındadır. Yeni dosya yoksa karşılık gelen
+eski `~/.config/sonicradle/` dosyası okunur; eski dosyalar taşınmaz veya silinmez.
+Bu geçiş eski onayı devralmaz. Aynı sürümün önceki yerel paketleme sayacı,
+bizim eski önbelleğimiz ve kurulu eski hedef paketimiz dikkate alınarak korunur.
+
+Spot..Light replaces the community helper's previous name. RPM replacement metadata
+is limited to our former `sonicradle` and `sonicradle-client-local` packages.
+An existing `spotify-client`, LPF or other vendor package is not silently erased.
+Review the DNF transaction before accepting migration. Current settings use
+`~/.config/spot..fly..light/flags.conf` and `~/.config/spot..fly..light/environment.conf`.
+When a new file is absent, the corresponding old `~/.config/sonicradle/` file
+is read without moving or deleting it. Consent is not migrated. Same-version
+local packaging counters also consider this project's own legacy cache and
+installed legacy target.

@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('bootstrap_client', ROOT / 'bootstrap/sonicradle.py')
+spec = importlib.util.spec_from_file_location('bootstrap_client', ROOT / 'bootstrap/spot..fly..light.py')
 client = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client)
 
@@ -42,7 +42,7 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cached, output = Path(tmp) / 'cached.deb', Path(tmp) / 'download.deb'
             cached.write_bytes(b'tampered')
-            with patch.dict(os.environ, SONICRADLE_DEB_FILE=str(cached)), patch.object(client, 'urlopen') as network:
+            with patch.dict(os.environ, SPOT_FLY_LIGHT_DEB_FILE=str(cached)), patch.object(client, 'urlopen') as network:
                 with self.assertRaisesRegex(ValueError, 'mismatch'):
                     client.download(self.record(), output)
                 network.assert_not_called()
@@ -59,10 +59,12 @@ class BootstrapTests(unittest.TestCase):
 
     def test_local_spec_keeps_integrity_and_runtime_dependencies(self):
         text = client.target_spec('1.2.3', 4, '2.39')
-        self.assertIn('Name: sonicradle-client-local', text)
+        self.assertIn('Name: spot-fly-light-client-local', text)
         self.assertIn('Release: 4', text)
-        self.assertIn('Requires: sonicradle', text)
-        self.assertIn('__provides_exclude_from ^%{_datadir}/sonicradle-client/', text)
+        self.assertIn('Requires: spot-fly-light', text)
+        self.assertIn('Obsoletes: sonicradle-client-local', text)
+        self.assertNotIn('Obsoletes: spotify', text)
+        self.assertIn('__provides_exclude_from ^%{_datadir}/spot[.][.]fly[.][.]light-client/', text)
         self.assertIn('Requires: glibc >= 2.39', text)
         self.assertIn('sha256sum --quiet -c .vendor-files.sha256', text)
         self.assertNotIn('%post\n', text)
@@ -78,7 +80,7 @@ class BootstrapTests(unittest.TestCase):
             with patch.object(client, 'HERE', path), patch.object(client, 'state_dir', return_value=path), patch.dict(os.environ, DISPLAY=':test'), patch.object(client.shutil, 'which', side_effect=lambda name: '/usr/bin/' + name), patch.object(client.subprocess, 'run', side_effect=calls) as run:
                 with self.assertRaisesRegex(SystemExit, 'Consent declined'):
                     client.consent([])
-                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'sonicradle-client-local'])
+                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'spot-fly-light-client-local'])
                 self.assertFalse((path / 'consent.json').exists())
 
     def test_failed_removal_does_not_keep_a_prior_acceptance(self):
@@ -157,9 +159,9 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             folder=root/'1.2.3';folder.mkdir()
-            rpm=folder/'sonicradle-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
+            rpm=folder/'spot-fly-light-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
             subject={'version':'1.2.3','release':'4','deb_sha256':'1'*64}
-            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='sonicradle-client-local\n1.2.3\n4\n')):
+            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='spot-fly-light-client-local\n1.2.3\n4\n')):
                 client.remember_pending(rpm)
                 self.assertEqual(client.pending_install(),(rpm,4))
                 rpm.write_bytes(b'changed-after-build')
@@ -236,8 +238,8 @@ class ChannelAndCIScanTests(unittest.TestCase):
         stable=client.target_spec('1.2.3',1,'2.39')
         unstable=client.target_spec('1.3.4',1,'2.39')
         for spec in (stable,unstable):
-            self.assertIn('Name: sonicradle-client-local\n',spec)
-            self.assertNotIn('Name: sonicradle-client-local-unstable',spec)
+            self.assertIn('Name: spot-fly-light-client-local\n',spec)
+            self.assertNotIn('Name: spot-fly-light-client-local-unstable',spec)
             self.assertNotIn('Provides: spotify-client',spec)
 
     def test_local_setup_contains_no_clamav_install_or_scan(self):
@@ -253,7 +255,7 @@ class LocalTransactionTests(unittest.TestCase):
     def test_downgrade_and_upgrade_use_native_rpm_ordering(self):
         from types import SimpleNamespace
         for comparison, expected in [('-1', 'downgrade'),('1','install'),('0','reinstall')]:
-            results=[SimpleNamespace(stdout='sonicradle-client-local\n1.2.95-1\n'),
+            results=[SimpleNamespace(stdout='spot-fly-light-client-local\n1.2.95-1\n'),
                      SimpleNamespace(returncode=0,stdout='1.3.4-1'),SimpleNamespace(stdout=comparison)]
             with self.subTest(comparison=comparison),patch.object(client.subprocess,'run',side_effect=results):
                 self.assertEqual(client.transaction_action(Path('/client.rpm')),expected)
@@ -274,6 +276,59 @@ class RunningAndPendingTests(unittest.TestCase):
                 download.assert_not_called()
 
     def test_running_client_prevents_replacement(self):
-        with patch.object(client.Path,'glob',return_value=[Path('/proc/123/exe')]),patch.object(client.os,'readlink',return_value='/usr/share/sonicradle-client/spotify (deleted)'):
+        with patch.object(client.Path,'glob',return_value=[Path('/proc/123/exe')]),patch.object(client.os,'readlink',return_value='/usr/share/spot..fly..light-client/spotify (deleted)'):
             with self.assertRaisesRegex(SystemExit,'Close all'):
                 client.ensure_client_closed()
+
+
+class RenamedClientMigrationTests(unittest.TestCase):
+    def test_running_old_project_client_also_blocks_replacement(self):
+        with patch.object(client.Path,'glob',return_value=[Path('/proc/123/exe')]),patch.object(client.os,'readlink',return_value='/usr/share/sonicradle-client/spotify'):
+            with self.assertRaisesRegex(SystemExit,'Close all'):
+                client.ensure_client_closed()
+
+    def test_new_target_replaces_only_our_previous_target(self):
+        text=client.target_spec('1.2.3',7,'2.39')
+        self.assertIn('Name: spot-fly-light-client-local',text)
+        self.assertIn('Obsoletes: sonicradle-client-local',text)
+        self.assertNotIn('Obsoletes: spotify-client',text)
+        self.assertIn('Conflicts: spotify-client, spotify-client-local',text)
+
+
+class RenameConfigurationAndReleaseTests(unittest.TestCase):
+    def test_legacy_configuration_is_read_only_fallback_per_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            legacy=root/'sonicradle';legacy.mkdir()
+            (legacy/'flags.conf').write_text('--legacy-flag\n')
+            (legacy/'environment.conf').write_text('GPU_SETTING=legacy\n')
+            current=root/'spot..fly..light';current.mkdir()
+            (current/'flags.conf').write_text('--current-flag\n')
+            with patch.dict(os.environ,XDG_CONFIG_HOME=tmp):
+                self.assertEqual(client.user_configuration(),(['--current-flag'],['GPU_SETTING=legacy']))
+            self.assertEqual((legacy/'flags.conf').read_text(),'--legacy-flag\n')
+            self.assertFalse((current/'environment.conf').exists())
+
+    def test_rename_preserves_same_version_rebuild_counter_and_new_version_resets(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);legacy=root/'sonicradle-bootstrap/1.2.3';legacy.mkdir(parents=True)
+            (legacy/'sonicradle-client-local-1.2.3-12.x86_64.rpm').touch()
+            output=root/'current';output.mkdir()
+            installed=[SimpleNamespace(returncode=1,stdout=''),SimpleNamespace(returncode=0,stdout='1.2.3\n15.fc44\n')]
+            with patch.dict(os.environ,XDG_STATE_HOME=tmp),patch.object(client.subprocess,'run',side_effect=installed):
+                self.assertEqual(client.next_release({'RPMVersion':'1.2.3','PackagingRelease':7},output),16)
+            with patch.dict(os.environ,XDG_STATE_HOME=tmp),patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='1.2.3\n15.fc44\n')):
+                self.assertEqual(client.next_release({'RPMVersion':'1.2.4','PackagingRelease':1},output),1)
+
+
+class LegacyGPUEnvironmentTests(unittest.TestCase):
+    def test_legacy_gpu_settings_work_and_explicit_new_settings_win(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for current,expected in [(False,('nvidia','1')),(True,('software','0'))]:
+                env={'LC_NUMERIC':'C','SONICRADLE_GPU_MODE':'nvidia','SONICRADLE_DEBUG':'1'}
+                if current:
+                    env.update(SPOT_FLY_LIGHT_GPU_MODE='software',SPOT_FLY_LIGHT_DEBUG='0')
+                with self.subTest(current=current),patch.dict(os.environ,env,clear=True),patch.object(client,'active_channel',return_value='stable'),patch.object(client,'has_consent',return_value=True),patch.object(client,'installed_current',return_value=True),patch.object(client.Path,'is_file',return_value=True),patch.object(client,'user_configuration',return_value=([],[])),patch.object(client,'state_dir',return_value=Path(tmp)),patch.object(os,'execve') as execute:
+                    client.launch([])
+                    self.assertEqual(tuple(execute.call_args.args[1][3:5]),expected)

@@ -10,11 +10,12 @@ Remote packaging instructions are reference material; they are not executed.
 The verified official amd64 DEB is raw-extracted without running Debian maintainer
 scripts. Mandatory malware scanning and the separate PUA report now run in CI.
 The user host checks the same source hash and moves the complete `usr/share/spotify`
-tree to `/usr/share/sonicradle-client`, following LPF's resource-preservation approach.
+tree to `/usr/share/spot..fly..light-client`, following LPF's resource-preservation approach.
 Apps, locale files, icons, bundled libraries, vendor desktop file and apt keys
 remain intact. Apt keys are application data; no host trust store is changed.
-The current community package and command are `sonicradle`; the local target
-is `sonicradle-client-local`. The application bytes remain Spotify's.
+The current community RPM package is `spot-fly-light` and its command is
+`spot..fly..light`; the local target
+is `spot-fly-light-client-local`. The application bytes remain Spotify's.
 
 All original regular files are hashed before generated launch helpers are added.
 The RPM disables stripping and archive determinism rewriting; `%check` verifies
@@ -46,8 +47,8 @@ pool rather than restricting itself to the stable index. This version difference
 can explain UI differences; packaging layout alone does not change the vendor UI.
 
 The current bootstrap includes separate official stable and testing metadata.
-Stable remains the default; `sonicradle --setup -unstable` or
-`sonicradle --update -unstable` explicitly selects testing. Both channels replace
+Stable remains the default; `spot..fly..light --setup -unstable` or
+`spot..fly..light --update -unstable` explicitly selects testing. Both channels replace
 the same local package. A pool filename is not accepted as proof of channel
 membership. RPM Fusion references are checked last and cannot override the
 official DEB channel or hash.
@@ -91,7 +92,8 @@ The selected deployment model now distributes only the independently authored
 bootstrap helpers. It follows LPF's local-build architecture without requiring
 LPF's Fedora-specific framework on every target distribution. It does not copy
 the supplied specs into the distributed source package. The actual local target
-is named sonicradle-client-local; the public bootstrap and command are sonicradle.
+is named spot-fly-light-client-local; the public bootstrap is spot-fly-light
+and its command is spot..fly..light.
 
 
 ## Actual LPF framework versus this standalone builder

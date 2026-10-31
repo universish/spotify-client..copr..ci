@@ -7,18 +7,21 @@ permission has been supplied to this project.
 
 ## Current names
 
-The community bootstrap and terminal command are `sonicradle`. The locally
-generated proprietary target is `sonicradle-client-local`. The original
+The community bootstrap is `spot-fly-light`; its terminal command is
+`spot..fly..light`. The locally
+generated proprietary target is `spot-fly-light-client-local`. The original
 application remains Spotify's application, with its original ownership and
-embedded notices. The new name is a precaution against presenting the community
+embedded notices. The former community name was Sonicradle. Those published records remain
+historical evidence; the current project name is Spot..Light.
+The new name is a precaution against presenting the community
 helper as an official product; it is not evidence of registered or globally
-exclusive trademark rights in the word Sonicradle.
+exclusive trademark rights in the word Spot..Light.
 
 `spotify`, `spotify-client` or `spotify-client-local` as an identifier does not,
 by itself, prove a legal violation. The relevant context includes product
 presentation, likelihood of confusion, the applicable terms and the law of the
 relevant jurisdiction. The old names are retained in historical evidence rather
-than erased from the record. Current package/command examples use Sonicradle.
+than erased from the record. Current package examples use `spot-fly-light`; command examples use `spot..fly..light`.
 
 The COPR identifier `universish/Spotify..Client` is retained as a historical,
 descriptive repository identifier with a prominent unofficial-project notice.

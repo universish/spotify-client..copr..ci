@@ -6,14 +6,14 @@ and disclaimer are [bootstrap/NOTICE.txt](../bootstrap/NOTICE.txt) and
 [bootstrap/DISCLAIMER.txt](../bootstrap/DISCLAIMER.txt). Root notice files remain
 unchanged historical snapshots covered by the original timestamp evidence.
 
-Sonicradle distributes a freely licensed, payload-free bootstrap through COPR.
+Spot..Light distributes a freely licensed, payload-free bootstrap through COPR.
 The Spotify DEB is downloaded and scanned temporarily in GitHub Actions, and
 its source hash/scan record is included in the bootstrap. The original app is
 not included in the public SRPM/RPM. On the user's computer, that same DEB is
 downloaded, hash-verified, unpacked and packaged locally after approval.
 ClamAV is not installed or run on the user's computer.
 
-The proprietary local target is `sonicradle-client-local`. It is not uploaded to
+The proprietary local target is `spot-fly-light-client-local`. It is not uploaded to
 COPR/GitHub by this workflow. The local build follows the architectural idea of
 LPF without using the actual LPF framework. LPF's own license or the RPM Fusion
 bootstrap reference license does not license Spotify or every inherited file.

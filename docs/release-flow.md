@@ -23,9 +23,9 @@ index. No host APT sources or trust store is changed.
 
 ## Version identity and concurrency
 
-The payload-free bootstrap is named `sonicradle`; it carries metadata for both
+The payload-free bootstrap RPM is named `spot-fly-light`; it carries metadata for both
 channels. Its RPM version follows the stable upstream version. The local target
-is named `sonicradle-client-local` for both channels. A switch replaces that
+is named `spot-fly-light-client-local` for both channels. A switch replaces that
 single package instead of creating side-by-side stable/testing installs.
 
 The planner compares the selected source signature with previously delivered
@@ -36,8 +36,12 @@ not changed.
 
 Packaging numbers increase for the same bootstrap version and start at 1 for a
 new upstream version. Annotated, metadata-only reservation tags use
-`sonicradle-v<stable-version>-<release>`. They are not GitHub Releases and do not
-contain RPM downloads. An existing reservation is never rewritten; interrupted
+`spot-fly-light-v<stable-version>-<release>`. They are not GitHub Releases and do not
+contain RPM downloads. Git reference names cannot contain `..`, so this internal
+tag prefix matches the normalized RPM name `spot-fly-light`; the terminal
+command retains the spelling `spot..fly..light`.
+Existing `sonicradle-v...` reservation tags remain
+historical numbering evidence and are not renamed or rewritten. An existing reservation is never rewritten; interrupted
 attempts can leave numbering gaps. A shared concurrency group prevents parallel
 scheduled/manual delivery from racing. COPR build history also informs the
 counter and successful-delivery decision. The testing client revision counts
@@ -58,7 +62,7 @@ DEB or extracted application. Scan records are statements produced by this
 workflow, not a guarantee against unknown threats or a grant of legal rights.
 The bootstrap archive is separately checked for its explicit free-helper allowlist; no vendor payload is included.
 
-ClamAV is neither installed nor run on the user's computer by Sonicradle.
+ClamAV is neither installed nor run on the user's computer by Spot..Light.
 The user downloads the selected official DEB and verifies the same size/hash
 before extraction and local RPM construction. A mismatched source is rejected;
 the local builder cannot treat a different file as the previously scanned one.
@@ -79,10 +83,10 @@ also does not transfer the uploader's obligations to Fedora.
 
 ## Local setup
 
-`sonicradle --setup` selects stable; `sonicradle --setup -unstable` selects
-testing. `sonicradle --update` returns to/currently selects stable, while
-`sonicradle --update -unstable` selects testing regardless of the previously
-installed channel. Launching `sonicradle` runs the installed choice. Source hash,
+`spot..fly..light --setup` selects stable; `spot..fly..light --setup -unstable` selects
+testing. `spot..fly..light --update` returns to/currently selects stable, while
+`spot..fly..light --update -unstable` selects testing regardless of the previously
+installed channel. Launching `spot..fly..light` runs the installed choice. Source hash,
 version, channel and packaging revision are bound to the approval/build context.
 
 The original app tree and embedded notices are preserved. Local packaging uses

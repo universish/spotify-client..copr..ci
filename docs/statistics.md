@@ -3,7 +3,7 @@
 The owner originally supplied a Spotify Developer dashboard URL. That dashboard
 counts activity for applications using Spotify's APIs/SDKs; repackaging the
 native desktop application does not make it use this project's Client ID.
-Sonicradle adds no OAuth flow, API traffic or usage telemetry.
+Spot..Light adds no OAuth flow, API traffic or usage telemetry.
 
 [Spotify application concepts](https://developer.spotify.com/documentation/web-api/concepts/apps)
 explain the developer-app identity. No developer API or VirusTotal credential is

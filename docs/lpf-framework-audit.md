@@ -9,7 +9,7 @@ These are distinct sources:
 | leamas/lpf | Actual Local Package Factory framework; design reference |
 | rpmfusion/lpf-spotify-client | Spotify bootstrap/target specs; existing LPF license snapshot source |
 | sergiomb2/spotify-make | Reference for preservation of Debian application resources |
-| bootstrap/spotify.py | Our independently authored, standalone local builder |
+| bootstrap/spot..fly..light.py | Our independently authored, standalone local builder |
 
 The archived `licenses/LPF-bootstrap-LICENSE.txt` comes from the RPM Fusion
 Spotify bootstrap, not the LPF engine. Its pinned source link is in LICENSE.txt.
@@ -24,9 +24,9 @@ installed target with the bootstrap version. Our approval was only bound to
 the notice text. It is now also bound to the selected DEB hash, version and
 packaging revision. A new package cannot inherit an old package's approval.
 
-The launcher now checks the installed sonicradle-client-local version and revision.
+The launcher now checks the installed spot-fly-light-client-local version and revision.
 A missing/outdated target is reported instead of running it as the current
-client. `sonicradle --status` exposes approve-wait, build-wait, install-wait or OK. These are a
+client. `spot..fly..light --status` exposes approve-wait, build-wait, install-wait or OK. These are a
 small standalone status interface, not the framework's full state machine.
 
 A dialog process error was previously treated as user rejection. Only the
@@ -37,9 +37,9 @@ the removal behavior requested by this repository's owner.
 ## Remaining architectural differences
 
 A completed local RPM is retained with its digest, size, package context and
-RPM identity. `sonicradle --install` retries only that verified artifact; it never
-starts an unapproved download/build. `sonicradle --setup` can also resume it;
-`sonicradle --rebuild` explicitly requests a fresh verified local build. Missing, changed or
+RPM identity. `spot..fly..light --install` retries only that verified artifact; it never
+starts an unapproved download/build. `spot..fly..light --setup` can also resume it;
+`spot..fly..light --rebuild` explicitly requests a fresh verified local build. Missing, changed or
 wrong-context cache files cannot be installed through this retry path.
 
 The real framework uses a dedicated pkg-build account/group, its own installed
@@ -61,9 +61,10 @@ packages. Those tests were not run on this computer. Regression checks use
 synthetic data and mocked privileged operations; the working LPF installation,
 user configuration and previous signed evidence are preserved.
 
-## Sonicradle update to the original comparison
+## Spot..Light update to the original comparison
 
-Current package/command names are `sonicradle` and `sonicradle-client-local`.
+The bootstrap package is `spot-fly-light`, its command is `spot..fly..light`,
+and its local target is `spot-fly-light-client-local`.
 Stable and testing share one local target. Setup/update defaults to stable;
 `-unstable` explicitly selects testing. Original LPF package names above in
 source references identify those upstream projects rather than the new command.

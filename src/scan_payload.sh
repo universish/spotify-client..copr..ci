@@ -15,7 +15,7 @@ report_dir=${SCAN_REPORT_DIR:-${TMPDIR:-/tmp}/spotify-scan-reports-${UID}}
 mkdir -p "$database" "$report_dir"
 database=$(realpath "$database")
 report_dir=$(realpath "$report_dir")
-config=$(mktemp "${TMPDIR:-/tmp}/sonicradle-freshclam.XXXXXXXX")
+config=$(mktemp "${TMPDIR:-/tmp}/spot..fly..light-freshclam.XXXXXXXX")
 trap 'rm -f "$config"' EXIT
 cat > "$config" <<CONFIG
 DatabaseDirectory $database

@@ -1,14 +1,17 @@
-The payload-free bootstrap uses `bootstrap/sonicradle.py` and the same GPU helper
-installed under `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. The bootstrap generates its local target separately. GPU selection and bounded
+The payload-free bootstrap uses `bootstrap/spot..fly..light.py` and the same GPU helper
+installed under `/usr/share/spot..fly..light-bootstrap/spot..fly..light-gpu.sh`. The bootstrap generates its local target separately. GPU selection and bounded
 fallback behavior are shared with the historical reference implementation.
 
 # Adaptive GPU launcher and RPM integration
 
-`/usr/bin/sonicradle` reads `~/.config/sonicradle/environment.conf` and
-`~/.config/sonicradle/flags.conf` and delegates
-to `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. Selection happens in the user's session
+`/usr/bin/spot..fly..light` reads `~/.config/spot..fly..light/environment.conf` and
+`~/.config/spot..fly..light/flags.conf` and delegates
+to `/usr/share/spot..fly..light-bootstrap/spot..fly..light-gpu.sh`. Selection happens in the user's session
 on every launch. Root installation scripts do not probe a display or write a
 hardware-specific launcher, and no system-wide GPU configuration is changed.
+If either new configuration file is absent, its matching file under
+`~/.config/sonicradle/` is read as a migration fallback. The old files are not
+moved or deleted, and installation consent is not inherited.
 
 ## Detection and profiles
 
@@ -39,14 +42,14 @@ Actual video acceleration depends on the driver, codecs and Spotify/CEF build;
 requesting these features does not install a VA-API driver or prove support.
 
 Explicit user `--use-gl`, `--use-angle` or GPU-disable flags take precedence over
-automatic selection. `SONICRADLE_GPU_MODE` can be set in the process environment or
-`~/.config/sonicradle/environment.conf`; a wrapper `--gpu-mode=` option has higher priority.
+automatic selection. `SPOT_FLY_LIGHT_GPU_MODE` can be set in the process environment or
+`~/.config/spot..fly..light/environment.conf`; a wrapper `--gpu-mode=` option has higher priority.
 
 ```sh
-sonicradle --debug
-sonicradle --safe-mode
-sonicradle --gpu-mode=native
-sonicradle --gpu-mode=nvidia-desktop --debug
+spot..fly..light --debug
+spot..fly..light --safe-mode
+spot..fly..light --gpu-mode=native
+spot..fly..light --gpu-mode=nvidia-desktop --debug
 ```
 
 Safe/native modes avoid the optional GL probe. Safe mode also removes inherited
@@ -68,11 +71,11 @@ Persistent warnings in a still-running app can be handled with `--safe-mode`.
 
 ## RPM integration
 
-The public bootstrap installs `/usr/bin/sonicradle` and the independent GPU
-helper under `/usr/share/sonicradle-bootstrap/sonicradle-gpu.sh`. The locally
+The public bootstrap installs `/usr/bin/spot..fly..light` and the independent GPU
+helper under `/usr/share/spot..fly..light-bootstrap/spot..fly..light-gpu.sh`. The locally
 built target preserves the original executable at
-`/usr/share/sonicradle-client/spotify`; that vendor filename does not become
-an additional public terminal command. `bootstrap/sonicradle.py` generates the
+`/usr/share/spot..fly..light-client/spotify`; that vendor filename does not become
+an additional public terminal command. `bootstrap/spot..fly..light.py` generates the
 local target spec and desktop integration.
 
 The target requires desktop-file-utils and hicolor-icon-theme. Its desktop file

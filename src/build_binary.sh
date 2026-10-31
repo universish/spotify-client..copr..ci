@@ -6,7 +6,7 @@ output=${2:-./output}
 source_rpm=$(realpath "$source_rpm")
 mkdir -p "$output"
 output=$(realpath "$output")
-work=$(mktemp -d "${TMPDIR:-/tmp}/spotify-rpm.XXXXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/spot..fly..light-rpm.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 mkdir -p "$work/tmp"
 for command in bash tar gzip desktop-file-validate; do command -v "$command" >/dev/null; done
@@ -18,4 +18,4 @@ rpmbuild --rebuild --target x86_64 "${build_options[@]}" \
     --define "_topdir $work" --define "_tmppath $work/tmp" \
     --define 'dist %{nil}' --define '_binary_payload w3.zstdio' \
     "$source_rpm" 2>&1 | tee "$output/rpm-build.log"
-cp "$work"/RPMS/x86_64/sonicradle-*.x86_64.rpm "$output/"
+cp "$work"/RPMS/x86_64/spot-fly-light-*.x86_64.rpm "$output/"

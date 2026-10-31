@@ -20,7 +20,7 @@ PROJECT_QUERY = parse.urlencode({'ownername': 'universish', 'projectname': 'Spot
 class GitHub:
     def __init__(self, repository, token):
         self.base = f'https://api.github.com/repos/{repository}'
-        self.headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'sonicradle-release-planner'}
+        self.headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'spot..fly..light-release-planner'}
         if token:
             self.headers['Authorization'] = f'Bearer {token}'
 
@@ -36,7 +36,7 @@ class GitHub:
     def reservations(self):
         records = self.call('/git/matching-refs/tags/')
         for record in records:
-            if record['ref'].startswith('refs/tags/sonicradle-v') and record.get('object', {}).get('type') == 'tag':
+            if record['ref'].startswith(('refs/tags/spot-fly-light-v', 'refs/tags/sonicradle-v')) and record.get('object', {}).get('type') == 'tag':
                 tag = self.call('/git/tags/' + record['object']['sha'])
                 try:
                     record['reservation'] = json.loads(tag['message'])
@@ -58,18 +58,18 @@ def copr_builds():
 
 
 def revision_from_tag(version, tag):
-    match = re.fullmatch(rf'(?:sonicradle-)?v{re.escape(version)}-([1-9][0-9]*)', tag)
+    match = re.fullmatch(rf'(?:(?:spot-fly-light|sonicradle)-)?v{re.escape(version)}-([1-9][0-9]*)', tag)
     return int(match[1]) if match else None
 
 
 def revision_from_rpm(version, name):
-    match = re.fullmatch(rf'(?:spotify|sonicradle)-{re.escape(version)}-([1-9][0-9]*)(?:[.][A-Za-z0-9_+~.-]+)?[.](?:x86_64|x86_64_v2|src)[.]rpm', name)
+    match = re.fullmatch(rf'(?:spotify|sonicradle|spot-fly-light)-{re.escape(version)}-([1-9][0-9]*)(?:[.][A-Za-z0-9_+~.-]+)?[.](?:x86_64|x86_64_v2|src)[.]rpm', name)
     return int(match[1]) if match else None
 
 
 def revision_from_copr(version, build):
     source = build.get('source_package') or {}
-    if source.get('name') not in ('spotify', 'sonicradle'):
+    if source.get('name') not in ('spotify', 'sonicradle', 'spot-fly-light'):
         return None
     match = re.fullmatch(rf'{re.escape(version)}-([1-9][0-9]*)(?:[.][A-Za-z0-9_+~.-]+)?', source.get('version', '').split(':', 1)[-1])
     return int(match[1]) if match else None
@@ -97,19 +97,22 @@ def plan(version, releases, refs, builds, manual=False, signature=None):
         number = revision_from_tag(version, ref['ref'].removeprefix('refs/tags/'))
         if number:
             numbers.append(number)
-            if signature and ref.get('reservation', {}).get('signature') == signature:
+            if (ref['ref'].startswith('refs/tags/spot-fly-light-v') and signature
+                    and ref.get('reservation', {}).get('signature') == signature):
                 matching.add(number)
     for build in builds:
         number = revision_from_copr(version, build)
         if number:
             numbers.append(number)
-            if build.get('state') == 'succeeded' and (signature is None or number in matching):
+            if (build.get('source_package', {}).get('name') == 'spot-fly-light'
+                    and build.get('state') == 'succeeded'
+                    and (signature is None or number in matching)):
                 delivered = True
     if delivered and not manual:
         return {'needed': False, 'version': version,
                 'reason': 'Pinned stable and unstable DEBs unchanged; stopping before download, scanning and packaging.'}
     number = max(numbers, default=0) + 1
-    return {'needed': True, 'version': version, 'release': number, 'tag': f'sonicradle-v{version}-{number}',
+    return {'needed': True, 'version': version, 'release': number, 'tag': f'spot-fly-light-v{version}-{number}',
             'reason': 'Manual repackaging requested.' if manual else 'New channel metadata detected.'}
 
 
@@ -122,7 +125,10 @@ def channel_release(channel, version, refs, stable_release, builds=()):
         stable = channels.get('stable', {})
         # A failed reservation never delivered this channel to COPR, so it does
         # not consume a local client revision (in particular the first -1).
-        delivered = any(b.get('state') == 'succeeded'
+        package = ('spot-fly-light' if ref['ref'].startswith('refs/tags/spot-fly-light-v')
+                   else 'sonicradle' if ref['ref'].startswith('refs/tags/sonicradle-v') else 'spotify')
+        delivered = any(b.get('source_package', {}).get('name') == package
+                        and b.get('state') == 'succeeded'
                         and revision_from_copr(stable.get('version', ''), b) == stable.get('release')
                         for b in builds)
         if not delivered:
@@ -149,7 +155,7 @@ def reserve(github, version, number, sha, reservation=None):
     if not re.fullmatch(r'[0-9a-f]{40}', sha):
         raise ValueError('GITHUB_SHA must be a full commit SHA')
     for _ in range(20):
-        tag = f'sonicradle-v{version}-{number}'
+        tag = f'spot-fly-light-v{version}-{number}'
         payload = dict(reservation or {})
         payload['release'] = number
         if 'channels' in payload:
@@ -196,7 +202,7 @@ def main():
         pins['stable']['release'] = result['release']
         for channel, record in channels.items():
             record.update(Channel=channel, PackagingRelease=pins[channel]['release'])
-        directory = Path(os.environ.get('SONICRADLE_METADATA_DIR', os.environ.get('SPOTIFY_METADATA_DIR', 'metadata')))
+        directory = Path(os.environ.get('SPOT_FLY_LIGHT_METADATA_DIR', 'metadata'))
         directory.mkdir(parents=True, exist_ok=True)
         (directory / 'source.json').write_text(json.dumps(channels, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(result))
