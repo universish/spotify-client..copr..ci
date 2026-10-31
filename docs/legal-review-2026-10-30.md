@@ -11,7 +11,7 @@ The community bootstrap is `spot-fly-light`; its terminal command is
 `spot..fly..light`. The locally
 generated proprietary target is `spot-fly-light-client-local`. The original
 application remains Spotify's application, with its original ownership and
-embedded notices. The former community name was Sonicradle. Those published records remain
+embedded notices. Published records under earlier community names remain
 historical evidence; the current project name is Spot..Light.
 The new name is a precaution against presenting the community
 helper as an official product; it is not evidence of registered or globally
@@ -64,9 +64,12 @@ downloads that exact source and verifies its hash before local packaging.
 ClamAV is not installed or run on the end-user computer by this workflow.
 
 Keeping a client's bytes unchanged, scanning them and showing a notice do not
-create permission to publicly redistribute them. GitHub Release RPM publishing
-is disabled under the current delivery policy. Source tags may remain as
-packaging-number reservations without containing downloadable RPM assets.
+create permission to publicly redistribute them. The current delivery policy
+allows GitHub Releases only for this project's verified free installer
+RPM/SRPM and checksums; proprietary client RPMs and DEBs remain excluded.
+A source tag can reserve a packaging number without containing a download;
+a verified installer release may later be attached to that tag. The revised
+release workflow awaits remote verification.
 
 The local-build architecture removes the previous public-client delivery path.
 It is not a claim that every local repackaging/use is expressly approved by

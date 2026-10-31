@@ -34,6 +34,20 @@ class SourceTests(unittest.TestCase):
         self.assertTrue(fetch.call_args.args[0].endswith("/dists/stable/non-free/binary-amd64/Packages"))
         self.assertEqual(result["RepositoryURL"], "https://repository.spotify.com")
 
+    def test_origin_is_third_official_metadata_source(self):
+        with mock.patch.object(sources.request, 'urlopen', side_effect=[URLError('offline'), URLError('offline'), io.BytesIO(INDEX)]) as fetch:
+            result = sources.fetch_package('stable')
+        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual(result['RepositoryURL'], 'https://repository-origin.spotify.com')
+        self.assertEqual(result['DownloadBaseURLs'][-1], 'https://deb.rug.nl/ppa/mirror/repository.spotify.com')
+
+    def test_community_mirror_never_supplies_authoritative_metadata(self):
+        with mock.patch.object(sources.request, 'urlopen', side_effect=URLError('offline')) as fetch:
+            with self.assertRaises(RuntimeError):
+                sources.fetch_package('stable')
+        self.assertEqual(fetch.call_count, 3)
+        self.assertTrue(all('deb.rug.nl' not in call.args[0] for call in fetch.call_args_list))
+
     def test_unusable_official_sources_fail_instead_of_claiming_unchanged(self):
         with mock.patch.object(sources.request, "urlopen", side_effect=URLError("offline")):
             with self.assertRaises(RuntimeError):

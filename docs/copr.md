@@ -50,21 +50,28 @@ on the user's computer. No proprietary sample is uploaded to VirusTotal.
 ## Submission, numbering and evidence
 
 The workflow detects both official channels, reserves a packaging number, scans
-the official DEBs in CI, builds/scans the free SRPM, uploads it directly to COPR
-and waits for completion. It does not create GitHub Releases. See
+the official DEBs in CI, builds the free SRPM from its explicit helper allowlist,
+uploads it directly to COPR and waits for completion. After success, GitHub
+Releases may contain only the verified free installer RPM/SRPM and
+`SHA256SUMS`; proprietary DEBs and local client RPMs remain excluded. See
 [release-flow.md](release-flow.md) for the source signature, reservation tags,
 numbering, scan record and cleanup rules.
 
 `tools/submit_copr.sh` intersects compatible candidates with the project's live
 enabled chroots. An API read failure or an empty compatible list stops
 submission; it never restores targets removed by the owner. Selected targets,
-submission logs and scan records are delivery evidence. Package/RPM artifacts
-are not retained in GitHub Actions.
+submission logs and scan records are delivery evidence. Actions report
+artifacts do not retain package/RPM archives; the permitted free installer
+release assets are published separately in GitHub Releases.
 
 For a new packaging number, use the workflow. Rebuilding an old source in COPR
 keeps that source RPM's identity. Source tags are retained as reservations;
-removing a GitHub Release must not erase numbering history. Repeated packaging
-of one upstream version increments Release; a new version starts at 1.
+removing a GitHub Release must not erase numbering history. The installer
+Version is the packaging date (`yy.mm.dd`) in `Europe/Stockholm`; repeated
+packaging on that date increments Release, starting at 1. Its description lists
+the separate pinned stable and testing Spotify versions. Client packaging
+revisions count separately and start at 1 for each new upstream version. An
+unchanged scheduled check does not publish solely because the date changed.
 
 ## Targets
 

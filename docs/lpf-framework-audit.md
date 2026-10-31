@@ -46,7 +46,10 @@ The real framework uses a dedicated pkg-build account/group, its own installed
 package layout, lifecycle macros, GUI and notifications. Our builder runs as the
 requesting unprivileged user and uses system authorization only for installation
 or removal. It does not provide the same account separation, full lifecycle,
-notification service or dedicated build account. It should not be described
+LPF notification service or dedicated build account. The independent desktop
+chooser now offers the two pinned channels once per installer version and opens
+a terminal for setup, with legal consent still separate. It does not provide
+LPF's GUI/state machinery. It should not be described
 as the actual LPF framework or equivalent isolation.
 
 Adopting that framework is a separate packaging/dependency transition across the

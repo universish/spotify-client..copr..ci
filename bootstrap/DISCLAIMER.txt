@@ -32,3 +32,9 @@ bootstrap contains no proprietary client. COPR hosting is infrastructure, not
 a transfer of the maintainer's responsibilities or an endorsement by Fedora,
 Red Hat or Spotify. This active disclaimer updates historical names in the
 archived root disclaimer; it grants no new Spotify or trademark rights.
+
+Public delivery through COPR and GitHub Releases is limited to the freely
+licensed, payload-free installer. GitHub release assets may contain only that
+installer's RPM/SRPM and checksums, never the Spotify DEB, extracted application
+or locally built proprietary client RPM. This delivery choice does not grant
+additional rights in Spotify or transfer the maintainer's obligations.

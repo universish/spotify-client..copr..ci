@@ -3,6 +3,7 @@
 import json
 import gzip
 import hashlib
+from http.client import HTTPException
 import io
 import os
 import re
@@ -13,7 +14,11 @@ from urllib import error, request
 from urllib.parse import urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
-REPOSITORIES = ("https://download.spotify.com/debian", "https://repository.spotify.com")
+REPOSITORIES = ("https://download.spotify.com/debian", "https://repository.spotify.com",
+                "https://repository-origin.spotify.com")
+# A community mirror can transport pinned bytes, but never supplies trusted
+# version/channel/checksum metadata. Official source hashes remain mandatory.
+DOWNLOAD_BASES = (*REPOSITORIES, "https://deb.rug.nl/ppa/mirror/repository.spotify.com")
 CHANNELS = {"stable": "stable", "unstable": "testing", "testing": "testing"}
 RPMFUSION = "https://download1.rpmfusion.org/nonfree/fedora/"
 # Fedora's testing repository is not Spotify's testing channel. These checks are
@@ -75,7 +80,7 @@ def _rpmfusion_check(item):
                                                "architecture": element.findtext(common + "arch")})
             element.clear()
         result["status"] = "ok"
-    except (error.URLError, TimeoutError, ValueError, ET.ParseError, OSError) as exc:
+    except (error.URLError, TimeoutError, ValueError, ET.ParseError, OSError, HTTPException) as exc:
         result["error"] = type(exc).__name__
     return result
 
@@ -139,14 +144,14 @@ def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=
             if not record.get("Size", "").isdigit() or int(record["Size"]) <= 0:
                 raise ValueError("Missing or invalid DEB size")
             record.update(RPMVersion=version, RepositoryURL=base, PackageIndexURL=url,
-                          DownloadBaseURLs=list(REPOSITORIES), Channel=channel, Distribution=distribution)
+                          DownloadBaseURLs=list(DOWNLOAD_BASES), Channel=channel, Distribution=distribution)
             print(f"Spotify package metadata: {url}", file=sys.stderr)
             selected = record
             break
         except error.HTTPError as exc:
             print(f"Package index unavailable (HTTP {exc.code}): {url}", file=sys.stderr)
             exc.close()
-        except (error.URLError, TimeoutError, ValueError, UnicodeError):
+        except (error.URLError, TimeoutError, ValueError, UnicodeError, OSError, HTTPException):
             print(f"Package index unavailable or invalid: {url}", file=sys.stderr)
     # Always last; a newer LPF bootstrap is useful evidence but not sufficient
     # authority to reclassify a Spotify testing DEB as stable or invent a hash.
@@ -154,7 +159,7 @@ def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=
     if selected is not None:
         selected["RPMFusionChecks"] = observations
         return selected
-    raise RuntimeError("Neither official Spotify package index is usable; RPM Fusion candidates cannot establish the DEB channel/checksum; stopping")
+    raise RuntimeError("No official Spotify package index is usable; RPM Fusion candidates cannot establish the DEB channel/checksum; stopping")
 
 
 def main():

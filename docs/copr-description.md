@@ -3,8 +3,11 @@
 Independent community project. Not affiliated with, approved by or supported by
 Spotify, Fedora or Red Hat. The historical COPR identifier is
 `universish/Spotify..Client`; the RPM package is `spot-fly-light` and the
-terminal command is `spot..fly..light`. RPM names cannot contain `..`, so the
-package name uses hyphens.
+primary terminal command is `spot..fly..light`; `spot-fly-light` is an
+equivalent command alias. RPM names cannot contain `..`, so the package name
+uses hyphens. The installer Version is its packaging date in Stockholm
+(`yy.mm.dd`), with a separate same-day Release counter. Its DNF description
+lists the distinct stable and testing client versions it can install.
 
 This repository distributes only a freely licensed, payload-free bootstrap.
 It does not contain the Spotify executable, application archive or logo.
@@ -13,6 +16,16 @@ computer, checks its size and SHA256 against the CI-scanned source record
 and builds a private local RPM. ClamAV runs only in the GitHub Actions VM;
 it is not installed or run on your computer. Administrator authorization is requested for the
 final installation. Debian installation scripts are not executed.
+
+Downloading, hash verification, extraction, local RPM compression and dependency
+resolution can each take time. The installer shows stage completion percentages,
+elapsed-time heartbeats, download bytes/percentage/speed/ETA, hash progress and
+live RPM build output. Stage percentages measure completed operations, not time
+remaining. Timings are written to `setup-progress.log` next to the local build
+log. Verified DEBs are kept in a private hash-keyed cache and checked again
+before reuse, avoiding another network download. The cache and resulting
+client RPM are for personal local use, not redistribution. `--install` retries
+a previously built, verified pending RPM without downloading or rebuilding it.
 
 The purpose is to preserve the original application resources, provide explicit
 source/channel selection and improve graphics compatibility without publicly
@@ -48,8 +61,9 @@ runtime. Dependencies are not bypassed.
 
 The following commands are for Fedora with DNF and the COPR plugin. Review an
 existing LPF/Spotify installation before switching; do not assume the packages
-can coexist. Replacement metadata covers only this project's former
-`sonicradle`/`sonicradle-client-local` packages, not unrelated vendor packages.
+can coexist. Before downloading, the installer identifies conflicting packages.
+Only a previous local target verified as this project's own package is eligible
+for replacement; unrelated vendor packages are not silently removed.
 Review the proposed package transaction before accepting it.
 If `dnf copr` is unavailable, install the matching COPR plugin for
 your Fedora/DNF version first.
@@ -59,6 +73,22 @@ your Fedora/DNF version first.
 ```sh
 sudo dnf copr enable universish/Spotify..Client
 sudo dnf install spot-fly-light
+```
+
+After the installer is installed or updated, an active graphical user session
+is asked which pinned client to install: stable or unstable/testing, with both
+version numbers shown. Continuing opens a terminal and runs
+`spot..fly..light --setup` or `spot..fly..light --setup -unstable` for the selected
+channel. The legal notice still requires your separate approval. Cancel closes
+the chooser without downloading or building and dismisses it for that installer
+version; the commands remain available manually.
+
+The popup runs as the desktop user, not inside a privileged RPM scriptlet.
+If no usable desktop session is available at installation, it is deferred until
+the next graphical login. Each desktop user is prompted once per installer
+Version-Release. For a terminal-only installation, use the setup commands below.
+
+```sh
 spot..fly..light --setup
 ```
 
@@ -85,6 +115,23 @@ spot..fly..light --debug
 spot..fly..light --safe-mode
 spot..fly..light --status
 ```
+
+## Inspect versions and help
+
+```sh
+dnf info spot-fly-light
+spot..fly..light --client-versions
+spot..fly..light -cl.ver
+spot..fly..light --help
+spot..fly..light -h
+spot-fly-light --help
+spot-fly-light -h
+```
+
+The version commands report both client versions in the installed bootstrap's
+catalog, without downloading or installing them. Help explains normal launch,
+setup, update, testing selection, status, debug and safe mode. Both command
+names accept the same options.
 
 ## Refresh repository metadata
 
@@ -157,8 +204,16 @@ New independently authored helpers: MIT, within the scope of the repository's
 Inherited files without a verified compatible grant are excluded from the
 distributed bootstrap source archive.
 
+Official metadata/download sources are tried in order: `download.spotify.com/debian`,
+`repository.spotify.com`, then `repository-origin.spotify.com`. The unofficial
+`deb.rug.nl/ppa/mirror/repository.spotify.com` is a final byte-download fallback
+only; the pinned official filename, size and SHA256 must match. It cannot select
+a channel or version, and source discovery stops if all official indexes fail.
+
 The automated workflow checks official Spotify metadata before RPM Fusion's
-Fedora 44/Rawhide packaging references. No GitHub Release RPMs are published.
-COPR receives only the free bootstrap SRPM; the proprietary client is built on
+Fedora 44/Rawhide packaging references. GitHub Releases may contain only the
+verified free installer RPM/SRPM and `SHA256SUMS`; the official Spotify DEB and
+private client RPM are excluded. COPR receives only the free bootstrap SRPM;
+the proprietary client is built on
 the end user's computer. The community helper uses no Nginx, Docker Hub or GHCR and adds no usage
 telemetry. This statement does not describe the vendor client’s network behavior.

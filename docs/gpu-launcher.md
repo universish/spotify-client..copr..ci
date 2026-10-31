@@ -9,9 +9,9 @@ fallback behavior are shared with the historical reference implementation.
 to `/usr/share/spot..fly..light-bootstrap/spot..fly..light-gpu.sh`. Selection happens in the user's session
 on every launch. Root installation scripts do not probe a display or write a
 hardware-specific launcher, and no system-wide GPU configuration is changed.
-If either new configuration file is absent, its matching file under
-`~/.config/sonicradle/` is read as a migration fallback. The old files are not
-moved or deleted, and installation consent is not inherited.
+If either current configuration file is absent, its matching file in this
+project's previous configuration directory is read as a migration fallback.
+The old files are not moved or deleted, and installation consent is not inherited.
 
 ## Detection and profiles
 

@@ -1,136 +1,19 @@
-# Spot..Light — yerel RPM kurucusu — universish
-
-Proje adı **Spot..Light**, RPM paketi **`spot-fly-light`**, terminal komutu
-**`spot..fly..light`**. RPM paket adlarında `..` kullanılamadığı için paket adı
-tirelerle yazılır; terminal komutu seçtiğiniz biçimi korur.
-
-> **31 Ekim 2026:** `spot-fly-light-1.2.95.453.g0eeebbed-8` kurucusu
-> [COPR derlemesi 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/)
-> ile 17 hedefin tamamında başarıyla üretildi. [Actions çalışması 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
-> CI tarama ve yayın kaydıdır. Kurucu stable ve testing kaynak bilgilerini içerir;
-> önceki Sonicradle paketleri yeni `spot..fly..light` komutunu içermez.
-
-**İndirmeden ve kurmadan önce okuyun:** COPR RPM'si küçük bir topluluk
-kurucusudur. Spotify uygulamasını, logosunu veya özel mülk ikililerini içermez.
-Spotify istemcisi, onayınızdan sonra **kendi bilgisayarınızda** resmî DEB'den
-indirilir, CI tarama kaydındaki SHA256 ile doğrulanır ve yerel RPM olarak paketlenir. Spotify tarafından desteklenen
-veya onaylanan bir proje değildir.
-
-[Güncel hukuki bildirim ve koşullar](bootstrap/NOTICE.txt), [sorumluluk reddi](bootstrap/DISCLAIMER.txt),
-[lisans kapsamı](LICENSE) ve [telif/atıflar](COPYRIGHT) indirmeden önce okunmalıdır.
-Spotify'ın [ülkenize uygulanan koşullarına](https://www.spotify.com/legal/end-user-agreement/)
-uymalısınız. Onay, bütün hukuki sorumluluğu kullanıcıya devretmez; zorunlu hakları
-ve bakımcının kendi yükümlülüklerini ortadan kaldırmaz. Bu belgeler Spotify
-RPM'lerini yeniden dağıtmak için izin sağlamaz. Yerel istemci RPM'sini paylaşmayın.
-
-## Kurulum ve onay
-
-Kurucu RPM yalnız COPR üzerinden dağıtılır; GitHub Releases RPM yayını kullanılmaz.
-
-COPR'dan yayımlanan kurucuyu kurmak için:
-
-```sh
-sudo dnf copr enable universish/Spotify..Client
-sudo dnf install spot-fly-light
-spot..fly..light --setup
-```
-
-Grafik oturumda hukuki metni ve onay kutusunu gösteren Zenity penceresi açılır.
-Onay verirseniz DEB indirilir ve CI tarama kaydındaki SHA256 ile doğrulanır; yerel `spot-fly-light-client-local`
-RPM'si üretilir. Ardından sistem yetkilendirmesiyle paket yöneticisi açılır.
-Yönetici yetkisi yalnızca son kurulum/kaldırma işlemi için kullanılır.
-
-Reddederseniz indirme, derleme ve çalıştırma durur. Bizim `spot-fly-light-client-local`
-paketimiz zaten kuruluysa kaldırılması için sistem yetkilendirmesi istenir.
-Yetki verilmezse veya kaldırma başarısızsa otomatik silindiği iddia edilmez;
-bu başlatıcı yine çalıştırmayı reddeder. Mevcut LPF/vendor paketleri otomatik
-kaldırılmaz. Küçük kurucu RPM'yi paket yöneticinizle ayrıca kaldırabilirsiniz.
-
-DNF/RPM işlemi sırasında grafik onay istenmez: kurucu kurulabilir, **asıl Spotify
-istemcisi için onay sonraki adımdadır**. Koşul bildirimi değişirse yeniden onay
-istenir. Onay kaydı kullanıcıya özeldir. Grafik oturumu olmayan kullanıcı metni
-inceledikten sonra açıkça `spot..fly..light --setup --accept-spotify-terms` çalıştırabilir.
-
-```sh
-spot..fly..light
-spot..fly..light --debug
-spot..fly..light --safe-mode
-spot..fly..light --gpu-mode=native
-```
-
-## Yerel istemci üretimi
-
-1. GitHub Actions sanal makinesinde resmî amd64 DEB doğrulanır ve ClamAV imzaları güncellenir.
-2. DEB ve açılmış içerik taranır; hata veya normal zararlı tespiti COPR gönderimini durdurur.
-3. Ayrı PUA taramasında yalnız `PUA.*` tespitleri raporlanıp devam edilir.
-4. Kurucuya kaynak SHA256 değerine bağlı tarama kaydı eklenir; DEB kurucuya eklenmez.
-5. Kullanıcı bilgisayarında aynı DEB indirilip boyutu/SHA256 değeri doğrulanır;
-   ClamAV kurulmaz veya çalıştırılmaz. Debian kurulum betikleri çalıştırılmadan açılır.
-6. LPF gibi uygulama ağacı `/usr/share/spot..fly..light-client/` altında eksiksiz tutulur.
-   RPM `%check` aşaması özgün dosyaların SHA256 değerlerini yeniden doğrular.
-7. Yerel RPM oluşturulur ve sistem yetkilendirmesiyle kurulması istenir.
-
-Yerel doğrulama/derleme kayıtları `${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/<sürüm>/`
-altındadır; ClamAV raporları Actions üzerinde tutulur.
-Tarama bilinmeyen bütün tehditlerin yokluğunu kanıtlamaz. Onay, yerel indirme ve paketleme
-kullanıcı yetkisiyle yapılır; kurucu RPM scriptlet'leri Spotify indirmez/çalıştırmaz.
-
-NVIDIA desktop GL profili çalışan LPF ayarlarını izler; desteklenen hibrit GPU'da
-PRIME uygulanır. AMD/Intel/Nouveau'ya NVIDIA değişkenleri eklenmez. Erken grafik
-hatasında sınırlı ANGLE/yazılım geri dönüşü vardır. Ozone/DPI zorlanmaz.
-Kullanıcı `spot..fly..light/flags.conf` ve `spot..fly..light/environment.conf` dosyaları korunur; ortam dosyası
-kabuk kodu olarak çalıştırılmaz. [GPU ayrıntıları](docs/gpu-launcher.md).
-
-## Otomasyon
-
-Yayın akışı artık yalnızca **özel mülk içerik taşımayan kurucu RPM/SRPM** üretir.
-Stockholm saatiyle her gün 12.00 ve 17.00'de iki kanalın sürümünü denetler; yeni sürüm
-yoksa derlemeden çıkar. Elle tetikleme aynı sürümü de yeniden paketler.
-Yeni sürüm `-1`, aynı sürümün tekrarları `-2`, `-3` olarak numaralanır.
-Resmî stable/testing DEB'ler ve açılmış içerikleri Actions üzerinde taranır;
-COPR sonucu beklenir. GitHub Releases oluşturulmaz. Geçici DEB/RPM dosyaları temizlenir;
-barındırılan sanal makinenin kapatılmasını GitHub yönetir.
-
-Metaveride önce download.spotify.com/debian, sonra repository.spotify.com
-kullanılır. Varsayılan stable x86_64'tür; `-unstable` yalnız açıkça istendiğinde testing seçer. ARM/32 bit yoktur.
-LPF'nin 1.3.4 kaynağı ile resmî stable 1.2.95 farkı [LPF belgesinde](docs/lpf-compatibility.md)
-açıklanır; testing otomatik seçilmez. RPM Fusion Fedora 44/Rawhide kayıtları en son
-kontrol edilir; resmî DEB kanalı ve SHA256 değerini geçersiz kılamaz.
-
-`COPR_CONFIG` secret ayarı ve etkin dağıtım seçimi [COPR belgesindedir](docs/copr.md).
-Main kurucu modeline geçirilmiştir. Önceki doğrulanan `1.2.95.453.g0eeebbed-4`
-yayını tarihsel kayıttır; yeni politika GitHub RPM yayını yapmaz. Temizlik ve COPR
-sonuçları [doğrulama kaydında](docs/validation.md) ayrıca belgelenir. Nginx, Docker Hub,
-GHCR kullanılmaz; kurucu kullanım telemetrisi eklemez. Spotify istemcisinin kendi
-ağ davranışı bu beyanın kapsamında değildir. GitHub dosyaları silinince indirme sayaçları kaybolur;
-COPR indirme sayısı da aktif kullanıcı sayısı değildir.
-
-## Geliştirme
-
-```sh
-python3 -m unittest discover -s tests -v
-```
-
-Paket üretimi iki kanalın metaverisini ve geçerli Actions tarama kaydını gerektirir;
-komutların sırası [yayın akışında](docs/release-flow.md) ve workflow dosyasındadır.
-Kurucu kaynak arşivi açık dosya listesiyle oluşturulur; eski çatala ait
-lisansı belirsiz üreticiler ve Spotify verileri bu arşive alınmaz.
-`src/build_once.sh` eski doğrudan istemci üretimini yalnız yerel karşılaştırmalar
-için korur; COPR/GitHub kurucu yayını bu betiği kullanmaz.
-
-----
-
 # Spot..Light Local RPM Installer — universish
 
+> The next installer includes date-based versioning, channel selection, English
+> notices, verified migration and detailed progress. Publication awaits
+> verification; the completed release below remains historical evidence.
+
 The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
-and its terminal command is **`spot..fly..light`**. RPM package names cannot
-contain `..`, so the package uses hyphens while the command keeps the chosen spelling.
+and its terminal command is **`spot..fly..light`**. **`spot-fly-light`** is an
+equivalent command alias. RPM package names cannot contain `..`, so the package
+uses hyphens while the primary command keeps the chosen spelling.
 
 > **31 October 2026:** Bootstrap `spot-fly-light-1.2.95.453.g0eeebbed-8`
 > built successfully for all 17 targets in [COPR build 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/).
 > [Actions run 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
 > records the CI scans and delivery. The bootstrap contains both stable and
-> testing source records; older Sonicradle packages do not contain `spot..fly..light`.
+> testing source records in the same installer.
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.
@@ -147,13 +30,32 @@ redistribute Spotify RPMs. Do not share the local client RPM.
 
 ## Installation and Acceptance
 
-The installer RPM is distributed through COPR; GitHub Releases is not an RPM publication channel.
+The freely licensed installer RPM is distributed through COPR and GitHub Releases.
+GitHub release assets contain only the payload-free installer RPM/SRPM and
+`SHA256SUMS`. The Spotify DEB and locally built client RPM are never published
+there. COPR provides repository-managed updates; GitHub provides direct downloads.
 
 To install the installer published via COPR:
 
 ```sh
 sudo dnf copr enable universish/Spotify..Client
 sudo dnf install spot-fly-light
+```
+
+After the installer is installed or updated, an active graphical user session
+is asked which pinned client to install: stable or unstable/testing, with both
+version numbers shown. Continuing opens a terminal and runs
+`spot..fly..light --setup` or `spot..fly..light --setup -unstable` for the selected
+channel. The legal notice still requires your separate approval. Cancel closes
+the chooser without downloading or building and dismisses it for that installer
+version; the commands remain available manually.
+
+The popup runs as the desktop user, not inside a privileged RPM scriptlet.
+If no usable desktop session is available at installation, it is deferred until
+the next graphical login. Each desktop user is prompted once per installer
+Version-Release. For a terminal-only installation, use the setup commands below.
+
+```sh
 spot..fly..light --setup
 ```
 
@@ -168,9 +70,10 @@ If authorization is not granted or the removal fails, it is not assumed to have 
 this launcher will again refuse to run. Existing LPF/vendor packages are not automatically
 removed. You can remove the small installer RPM separately using your package manager.
 
-No graphical confirmation is requested during the DNF/RPM process: the installer can be installed, **but confirmation for the actual Spotify
-client comes in the next step**. If the terms of service change, confirmation
-will be requested again. The confirmation record is user-specific. A user without a graphical session can
+The installer RPM itself does not accept Spotify terms or download the client
+in a DNF/RPM scriptlet. **Confirmation for the actual Spotify client comes in
+the user session.** If the terms of service change, confirmation will be
+requested again. The confirmation record is user-specific. A user without a graphical session can
 run `spot..fly..light --setup --accept-spotify-terms` explicitly after reviewing the text.
 
 ```sh
@@ -180,6 +83,43 @@ spot..fly..light --safe-mode
 spot..fly..light --gpu-mode=native
 ```
 
+## Versions and command help
+
+The installer has its own date-based version. DNF's package description lists
+both pinned Spotify client versions; it does not label the installer with
+Spotify's stable version. To inspect the repository package or the catalog
+already installed on your computer:
+
+```sh
+dnf info spot-fly-light
+spot..fly..light --client-versions
+spot..fly..light -cl.ver
+spot..fly..light --help
+spot..fly..light -h
+spot-fly-light --help
+spot-fly-light -h
+```
+
+`--client-versions` and `-cl.ver` read the installed installer's catalog. They
+show what this installer can build, without downloading or installing a client.
+Update `spot-fly-light` through DNF to receive a newer catalog.
+
+| Command | Purpose |
+| --- | --- |
+| `spot..fly..light` | Launch the installed client selection. |
+| `spot..fly..light --setup` | Review terms, build and request installation of the pinned stable client. |
+| `spot..fly..light --setup -unstable` | Perform setup for the pinned testing client. |
+| `-unstable` (with setup/update/install/rebuild) | Select testing for that operation; a standalone launch option does not switch clients. |
+| `spot..fly..light --update` | Build/install the stable client offered by the installed bootstrap. |
+| `spot..fly..light --update -unstable` | Build/install the testing client offered by the installed bootstrap. |
+| `spot..fly..light --debug` | Launch with graphics diagnostics. |
+| `spot..fly..light --safe-mode` | Launch with the software-rendering fallback. |
+| `spot..fly..light --status` | Report approval, build and installation readiness. |
+| `spot..fly..light --client-versions` or `-cl.ver` | List both pinned client versions. |
+| `spot..fly..light --help` or `-h` | Explain command options and usage. |
+
+The `spot-fly-light` alias accepts the same options.
+
 ## Local Client Build
 
 1. GitHub Actions verifies the official amd64 DEB and updates ClamAV signatures.
@@ -188,12 +128,27 @@ spot..fly..light --gpu-mode=native
 4. The payload-free bootstrap records the source SHA256 and CI scan result, not the application.
 5. On your computer, the same DEB is downloaded, its size/hash checked and its contents extracted
    without running Debian scripts. ClamAV is neither installed nor run on your computer.
-6. The application tree, such as LPF, is kept intact under `/usr/share/spot..fly..light-client/`.
+6. As in the LPF local-build model, the application tree is kept intact under `/usr/share/spot..fly..light-client/`.
    The RPM `%check` phase re-verifies the SHA256 values of the original files.
 7. A local RPM is created, and installation with system privileges is requested.
 
 Local verification/build records are under `${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/<version>/`.
 ClamAV scan reports are retained in Actions instead.
+
+The download, size/SHA256 verification, extraction, local RPM compression and
+package-manager dependency resolution can each take time. Stage messages show
+completed-step counts, a completion percentage and elapsed time. Steps have
+different durations, so the stage percentage does not predict remaining time.
+Downloads report transferred bytes, percentage, speed and estimated remaining
+time. Hash checks report progress, RPM build output is streamed live and
+periodic elapsed-time messages remain visible during longer operations.
+Verified official DEBs are retained privately under
+`${XDG_STATE_HOME:-$HOME/.local/state}/spot..fly..light-bootstrap/downloads/<sha256>.deb`.
+Each reuse verifies the full size and SHA256 again; an invalid cache is discarded.
+This personal cache is not a redistribution channel. The local build uses an
+uncompressed intermediate tar archive before final RPM compression. Build details and stage timings are retained in the local state
+directory. `setup-progress.log` records setup stages; `rpm-build.log` contains
+the RPM build output. No local antivirus scan is performed.
 Scanning does not guarantee the absence of all unknown threats. Approval, local download and packaging
 are performed as the requesting user; the installer’s RPM scriptlets do not download or run Spotify.
 
@@ -206,14 +161,37 @@ is not executed as shell code. [GPU details](docs/gpu-launcher.md).
 ## Automation
 
 The build pipeline now produces only **installer RPMs/SRPMs that do not contain proprietary content**.
-It checks for the stable release daily at 12:00 and 17:00 Stockholm time; if no new release
-is available, it skips the build. Manual triggering also repackages the same release.
-New releases are numbered `-1`, while subsequent releases of the same version are numbered `-2`, `-3`.
-The official stable/testing DEBs and their extracted contents are scanned in Actions;
-COPR completion is awaited. No GitHub Release is created. Temporary DEB/RPM files
-are removed; GitHub manages teardown of the hosted VM.
+It checks both official channels daily at 12:00 and 17:00 Stockholm time; if
+both pinned source records are unchanged from a successful delivery, it skips
+the build. Manual triggering also repackages unchanged sources.
+The installer version is the packaging date in `Europe/Stockholm`, formatted
+`yy.mm.dd` (for example, `26.10.31`). Its RPM Release starts at `1` for that
+date and increases for another packaging attempt on the same date. Spotify
+client versions are separate; each channel starts its local packaging counter
+at `1` for a new upstream version. An unchanged scheduled check does not
+publish a new installer merely because the date changed.
+The official stable/testing DEBs and their extracted contents are scanned in Actions.
+After successful COPR delivery, the workflow may publish only the verified free
+installer RPM/SRPM and `SHA256SUMS` in GitHub Releases. Temporary runner DEBs,
+extracted application trees and RPM files are then removed; GitHub manages
+teardown of the hosted VM. No proprietary client is uploaded.
 
-In the metadata, `download.spotify.com/debian` is used first, followed by `repository.spotify.com`.
+The configured network source order is:
+
+1. `https://download.spotify.com/debian` — official metadata and DEB source.
+2. `https://repository.spotify.com` — official metadata and DEB source.
+3. `https://repository-origin.spotify.com` — official metadata and DEB source.
+4. `https://deb.rug.nl/ppa/mirror/repository.spotify.com` — an unofficial,
+   byte-download fallback only, for the already pinned official filename.
+
+Only the three official indexes determine channel, version, filename, size and
+SHA256. Source discovery fails if all three official indexes are unavailable;
+it does not trust a mirror's index or select an arbitrary mirror version. A
+DEB fetched from the unofficial fallback must match the exact official size
+and SHA256 before use. A valid private cache is checked first and avoids a
+network download. RPM Fusion references remain the final advisory check and
+cannot override official channel or source identity.
+
 The default is stable x86_64; explicit `-unstable` selects testing. There is no ARM/32-bit version.
 The difference between LPF source 1.3.4 and the official stable 1.2.95 is explained [in the LPF documentation](docs/lpf-compatibility.md);
 testing is not automatically selected. RPM Fusion Fedora 44/Rawhide references
@@ -221,8 +199,10 @@ are checked last and cannot override the official DEB channel/hash.
 
 The `COPR_CONFIG` secret setting and active distribution selection are [in the COPR documentation](docs/copr.md).
 Main uses the payload-free bootstrap model. The previously verified
-`1.2.95.453.g0eeebbed-4` publication is historical; the new policy does not publish
-RPMs in GitHub Releases. Cleanup and COPR results are recorded separately in the
+`1.2.95.453.g0eeebbed-4` publication and its authorized cleanup are historical.
+The current policy allows only free installer RPM/SRPM releases, with the
+Spotify download and private local client build kept separate. Cleanup and COPR
+results are recorded separately in the
 [validation log](docs/validation.md). Nginx, Docker Hub and GHCR are not used. The community helper adds no usage
 telemetry; this statement does not describe the vendor client’s own network behavior.
 Deleting GitHub assets removes their download counters; COPR downloads also do
@@ -242,10 +222,7 @@ producers with unclear licenses from the old fork and Spotify data are not inclu
 the COPR/GitHub build release does not use this script.
 
 
-Translated with DeepL.com (free version)
-
-
-## Kurucu durum ve yeniden deneme / Installer state and retry
+## Installer state and retry
 
 ```sh
 spot..fly..light --status
@@ -253,20 +230,14 @@ spot..fly..light --install
 spot..fly..light --rebuild
 ```
 
-`--status` onay, derleme veya kurulum bekleme durumunu gösterir. `--install`,
-daha önce hazırlanmış RPM'nin SHA256 ve paket kimliğini yeniden doğrulayarak
-kurulumu tekrar dener; yeniden DEB indirmez. `--rebuild` yeni yerel doğrulama/derleme ister; kullanıcı bilgisayarında ClamAV çalıştırmaz.
-Yeni kaynak sürümü veya paketleme revizyonu yeniden onay gerektirir.
-
 `--status` reports approval/build/install readiness. `--install` retries a
 previously built RPM after checking its hash and package identity; it does not
 repeat the DEB download. `--rebuild` requests a fresh local verification/build; it does not run ClamAV on the user host. New source
 versions or bootstrap revisions need renewed approval.
 
-Bu bağımsız kurucu gerçek LPF motorunu kullanmaz. Ayrı pkg-build hesabı ve LPF
-bildirim servisi dahil mimari farklar [LPF karşılaştırmasında](docs/lpf-framework-audit.md)
-açıklanır. This standalone installer does not use the actual LPF framework;
-see the linked comparison for the account/lifecycle/notification differences.
+This standalone installer does not use the actual LPF framework; see the
+[LPF comparison](docs/lpf-framework-audit.md) for account, lifecycle and
+notification differences.
 
 ## Spot..Light: stable / testing channel operations
 
@@ -287,11 +258,6 @@ same local target, so there is one installed client. Launching `spot..fly..light
 the installed selection. Run setup/update without sudo. If an LPF/vendor client
 is already installed, review migration first rather than assuming coexistence.
 
-`-unstable`, Spot..Light seçeneğidir; DNF seçeneği veya ayrı paket adı değildir.
-Eki kullanmadan kurulum/güncelleme stable seçer; testing'den dönüş sürümü
-düşürebilir. İki kanal aynı yerel paketin yerine geçer; aynı anda iki istemci
-kurulmaz. Mevcut LPF/vendor kurulumundan geçiş ayrıca incelenmelidir.
-
 Read the English [project history and operating guide](docs/project-history-and-operation.md),
 [paste-ready COPR description](docs/copr-description.md) and
 [current legal/naming review](docs/legal-review-2026-10-30.md). COPR hosting
@@ -299,24 +265,18 @@ does not transfer responsibility to Fedora. The root notice/license files in
 the original timestamp manifest remain historical evidence; active installation
 notices are in `bootstrap/NOTICE.txt` and `bootstrap/DISCLAIMER.txt`.
 
-## Spot..Light ad geçişi / Naming transition
+## Existing installations and migration
 
-Spot..Light, topluluk kurucusunun yeni adıdır. Önceki kendi paketlerimiz
-`sonicradle` ve `sonicradle-client-local` için RPM değiştirme metaverisi vardır;
-yerine geçme kapsamı bu paketlerle sınırlıdır. Mevcut `spotify-client`, LPF veya
-başka sağlayıcı paketleri sessizce kaldırılmaz. DNF işlemini onaylamadan önce
-önerilen değişiklikleri inceleyin. Yeni ayarlar `~/.config/spot..fly..light/flags.conf` ve
-`~/.config/spot..fly..light/environment.conf` altındadır. Yeni dosya yoksa karşılık gelen
-eski `~/.config/sonicradle/` dosyası okunur; eski dosyalar taşınmaz veya silinmez.
-Bu geçiş eski onayı devralmaz. Aynı sürümün önceki yerel paketleme sayacı,
-bizim eski önbelleğimiz ve kurulu eski hedef paketimiz dikkate alınarak korunur.
+Before downloading or building, the installer checks for conflicting client
+packages. Only a previous local target verified as this project's own package
+is eligible for automatic replacement within the normal package-manager
+transaction. An unrelated LPF or other vendor package requires explicit
+migration review. Read the proposed transaction before accepting it.
 
-Spot..Light replaces the community helper's previous name. RPM replacement metadata
-is limited to our former `sonicradle` and `sonicradle-client-local` packages.
-An existing `spotify-client`, LPF or other vendor package is not silently erased.
-Review the DNF transaction before accepting migration. Current settings use
-`~/.config/spot..fly..light/flags.conf` and `~/.config/spot..fly..light/environment.conf`.
-When a new file is absent, the corresponding old `~/.config/sonicradle/` file
-is read without moving or deleting it. Consent is not migrated. Same-version
-local packaging counters also consider this project's own legacy cache and
-installed legacy target.
+Current settings use `~/.config/spot..fly..light/flags.conf` and
+`~/.config/spot..fly..light/environment.conf`. When a new configuration file is
+absent, the corresponding file in this project's previous configuration
+directory is read without moving or deleting it. Recognized previous GPU/debug
+settings remain fallback values; current settings take precedence. Consent is
+not migrated. Same-version local packaging counters also consider this
+project's own previous cache and installed local target.

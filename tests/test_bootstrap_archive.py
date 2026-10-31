@@ -22,19 +22,42 @@ def record(channel, version='1.2.3'):
                 'ScannedAt': '2026-10-30T00:00:00+00:00', 'DatabaseVersion': 'ClamAV 1.4/123/date'}}
 
 
+def identity(release=5):
+    return {'Version': '26.10.31', 'Release': release, 'Timezone': 'Europe/Stockholm',
+            'PackagedAt': '2026-10-31T05:00:00+01:00'}
+
+
 class BootstrapArchiveTests(unittest.TestCase):
     def test_contains_both_scanned_records_and_only_free_helpers(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             metadata = root / 'source.json'
-            metadata.write_text(json.dumps({'stable': record('stable'), 'unstable': record('unstable', '2.0')}))
+            metadata.write_text(json.dumps({'stable': dict(record('stable'), PackagingRelease=9),
+                'unstable': dict(record('unstable', '2.0'), PackagingRelease=3), 'Bootstrap': identity()}))
             inspected = []
             def observe(args, **kwargs):
                 spec_path = Path(args[-1])
                 text = spec_path.read_text()
                 self.assertIn('Name: spot-fly-light\n', text)
                 self.assertIn('Obsoletes: sonicradle\n', text)
-                self.assertIn('Provides: sonicradle = 1.2.3-5%{?dist}\n', text)
+                self.assertIn('Version: 26.10.31\n', text)
+                self.assertIn('Provides: sonicradle = 26.10.31-5%{?dist}\n', text)
+                self.assertIn('Spotify stable client: 1.2.3-9.', text)
+                self.assertIn('Spotify unstable client: 2.0-3.', text)
+                self.assertIn('/usr/bin/spot-fly-light\n', text)
+                self.assertIn('/etc/xdg/autostart/spot-fly-light-onboarding.desktop\n', text)
+                self.assertIn('/usr/lib/systemd/user/spot-fly-light-onboarding.service\n', text)
+                self.assertIn('desktop-file-validate %{buildroot}/etc/xdg/autostart/', text)
+                scriptlet = text.split('%posttrans\n', 1)[1].split('%files\n', 1)[0]
+                self.assertIn('command -v loginctl', scriptlet)
+                self.assertIn('--property=Type', scriptlet)
+                self.assertIn('--property=Remote', scriptlet)
+                self.assertIn('--property=Active', scriptlet)
+                self.assertIn('--user --machine="$user@.host"', scriptlet)
+                self.assertIn('--no-block start spot-fly-light-onboarding.service', scriptlet)
+                self.assertIn('exit 0', scriptlet)
+                self.assertNotIn('zenity', scriptlet)
+                self.assertNotIn('python3', scriptlet)
                 self.assertEqual([line for line in text.splitlines() if line.startswith('Obsoletes:')], ['Obsoletes: sonicradle'])
                 self.assertNotIn('/usr/bin/clamscan', text)
                 self.assertNotIn('/usr/bin/freshclam', text)
@@ -42,15 +65,34 @@ class BootstrapArchiveTests(unittest.TestCase):
                 with tarfile.open(archive_path) as archive:
                     files = {member.name for member in archive.getmembers() if member.isfile()}
                     self.assertEqual(files, {'bootstrap/' + name for name in ('spot..fly..light.py', 'spot..fly..light-gpu.sh',
-                        'eula.txt', 'DISCLAIMER.txt', 'COPYRIGHT', 'MIT-new-contributions.txt', 'source.json')})
+                        'eula.txt', 'DISCLAIMER.txt', 'COPYRIGHT', 'MIT-new-contributions.txt', 'source.json',
+                        'onboarding.py', 'spot-fly-light-onboarding.desktop', 'spot-fly-light-onboarding.service')})
                     records = json.load(archive.extractfile('bootstrap/source.json'))
-                    self.assertEqual(set(records), {'stable', 'unstable'})
-                    self.assertEqual(records['stable']['PackagingRelease'], 5)
-                    self.assertEqual(records['unstable']['PackagingRelease'], 1)
+                    self.assertEqual(set(records), {'stable', 'unstable', 'Bootstrap'})
+                    self.assertEqual(records['Bootstrap'], identity())
+                    self.assertEqual(records['stable']['PackagingRelease'], 9)
+                    self.assertEqual(records['unstable']['PackagingRelease'], 3)
                     self.assertEqual(records['unstable']['ScanAttestation']['PUA'], 'advisory')
+                    for name in ('eula.txt', 'DISCLAIMER.txt'):
+                        notice = archive.extractfile('bootstrap/' + name).read().decode()
+                        self.assertNotIn('sonicradle', notice.lower())
+                        self.assertNotIn('HUKUKİ BİLDİRİMİ', notice)
+                        self.assertIn('Spot..Light', notice)
                 inspected.append(True)
             with mock.patch.object(builder.subprocess, 'run', side_effect=observe): builder.build(metadata, root / 'out', 5)
             self.assertTrue(inspected)
+
+    def test_invalid_or_mismatched_packaging_identity_blocks_build(self):
+        for changes in ({'Version': '1.2.3'}, {'Timezone': 'Europe/Istanbul'}, {'Release': 6},
+                        {'PackagedAt': '2026-10-31T05:00:00'}):
+            with self.subTest(changes=changes), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / 'source.json'
+                path.write_text(json.dumps({'stable': record('stable'), 'Bootstrap': dict(identity(), **changes)}))
+                with mock.patch.object(builder.subprocess, 'run') as run:
+                    with self.assertRaises(ValueError): builder.build(path, Path(tmp) / 'out', 5)
+                run.assert_not_called()
+        with mock.patch.dict('os.environ', {'SPOT_FLY_LIGHT_VERSION': '26.11.01'}):
+            with self.assertRaises(ValueError): builder.bootstrap_identity({'Bootstrap': identity()}, 5)
 
     def test_missing_or_mismatched_scan_blocks_source_rpm(self):
         for change in ('missing', 'mismatched'):

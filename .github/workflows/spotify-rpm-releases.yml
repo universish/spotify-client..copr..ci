@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 
-# Atomic metadata tags reserve revisions. No GitHub Release is created.
+# Atomic metadata tags reserve revisions; only verified free helpers are released.
 concurrency:
   group: spot..fly..light-copr-release
   cancel-in-progress: false
@@ -35,7 +35,7 @@ jobs:
         if: steps.version.outputs.needed == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils
+          sudo apt-get install -y rpm rpm2cpio cpio dpkg-dev clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils
           python3 -m venv "$RUNNER_TEMP/spot..fly..light-copr-venv"
           "$RUNNER_TEMP/spot..fly..light-copr-venv/bin/pip" install copr-cli
           echo "$RUNNER_TEMP/spot..fly..light-copr-venv/bin" >> "$GITHUB_PATH"
@@ -66,6 +66,17 @@ jobs:
           SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
           SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
         run: bash tools/submit_copr.sh output/spot-fly-light-*.src.rpm output
+      - name: Verify and publish only the payload-free bootstrap to GitHub Releases
+        if: steps.version.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
+          SPOT_FLY_LIGHT_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          python3 tools/verify_release_payload.py output --version "$SPOT_FLY_LIGHT_VERSION" --release "$SPOT_FLY_LIGHT_RELEASE" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh release create "$SPOT_FLY_LIGHT_TAG" --verify-tag --draft --title "Spot..Light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" --notes-file output/release-notes.md output/spot-fly-light-*.src.rpm output/spot-fly-light-*.x86_64.rpm output/SHA256SUMS
+          gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --latest
       - name: Remove transient RPMs, source downloads and build environments
         if: always()
         shell: bash

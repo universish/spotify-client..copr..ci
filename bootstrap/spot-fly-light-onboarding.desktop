@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Spot..Light setup
+Comment=Choose the stable or unstable Spotify client to build locally
+Exec=/usr/bin/python3 /usr/share/spot..fly..light-bootstrap/onboarding.py
+TryExec=/usr/bin/spot..fly..light
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

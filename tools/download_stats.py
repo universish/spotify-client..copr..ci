@@ -41,26 +41,26 @@ def render(releases, repository):
         for tag, name, count in sorted(rows, key=lambda r: r[2], reverse=True)
     )
     if not rows:
-        table = '<tr><td colspan="4">Henüz yayımlanmış RPM dosyası yok.</td></tr>'
+        table = '<tr><td colspan="4">No RPM release assets are currently available.</td></tr>'
     total = sum(r[2] for r in rows)
     generated = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     return f'''<!doctype html>
-<html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spotify RPM indirmeleri</title>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot..Light RPM download history</title>
 <style>
 body{{font:16px system-ui,sans-serif;background:#101714;color:#e7eee9;max-width:1100px;margin:48px auto;padding:0 24px}}
 h1{{font-size:2rem}}.total{{font-size:3rem;color:#82e8ad;margin:16px 0}}a{{color:#82e8ad}}
 table{{border-collapse:collapse;width:100%;margin-top:32px}}td,th{{text-align:left;padding:14px 10px;border-bottom:1px solid #34473c}}
 td:last-child{{width:25%}}.bar{{height:12px;background:#82e8ad;min-width:0}}.muted{{color:#b0bdb4}}small{{overflow-wrap:anywhere}}
 </style>
-<h1>Spotify RPM indirmeleri</h1><p>{html.escape(repository)}</p>
-<p class="total">{total:,}</p><p>GitHub Releases üzerinden toplam RPM dosyası indirmesi</p>
-<p class="muted">Bu sayaç kurulum veya aktif kullanıcı sayısı değildir. Tekrarlanan indirmeler dahildir.
-COPR ve özel depo indirmeleri ayrı sayılır. Uygulamadan kullanım verisi toplanmaz.</p>
-<table><thead><tr><th>Sürüm</th><th>Dosya</th><th>İndirme</th><th>Grafik</th></tr></thead><tbody>{table}</tbody></table>
+<h1>Spot..Light RPM download history</h1><p>{html.escape(repository)}</p>
+<p class="total">{total:,}</p><p>Total RPM asset downloads from GitHub Releases</p>
+<p class="muted">This counts downloads, not installations or active users. Repeat downloads are included.
+COPR and private repository downloads are counted separately. The application collects no usage data for this report.</p>
+<table><thead><tr><th>Release</th><th>File</th><th>Downloads</th><th>Chart</th></tr></thead><tbody>{table}</tbody></table>
 <p><a href="https://github.com/{repository}/releases">GitHub Releases</a> ·
-<a href="https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/">COPR indirme sayaçları</a></p>
-<small class="muted">Oluşturulma zamanı (UTC): {generated}. Silinen/değiştirilen yayın dosyalarının sayaçları korunamaz.</small></html>'''
+<a href="https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/">COPR download counters</a></p>
+<small class="muted">Generated at (UTC): {generated}. Counters for deleted or replaced release assets cannot be preserved.</small></html>'''
 
 
 def main():

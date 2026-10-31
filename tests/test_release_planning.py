@@ -1,10 +1,13 @@
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
+from unittest import mock
 from urllib.error import HTTPError
 
 REPO = Path(__file__).resolve().parents[1]
@@ -22,6 +25,35 @@ def ref(version, number, signature='pinned'):
 
 
 class PlanningTests(unittest.TestCase):
+    def test_packaging_date_uses_stockholm_across_utc_day_boundary(self):
+        value = planner.packaging_identity(datetime(2026, 10, 30, 23, 30, tzinfo=timezone.utc))
+        self.assertEqual(value['Version'], '26.10.31')
+        self.assertEqual(value['Timezone'], 'Europe/Stockholm')
+        self.assertTrue(value['PackagedAt'].startswith('2026-10-31T00:30:00+01:00'))
+        summer = planner.packaging_identity(datetime(2026, 7, 10, 22, 30, tzinfo=timezone.utc))
+        self.assertEqual(summer['Version'], '26.07.11')
+        self.assertIn('+02:00', summer['PackagedAt'])
+
+    def test_unchanged_schedule_skips_across_packaging_dates(self):
+        previous = ref('26.10.30', 3)
+        result = planner.plan('26.10.31', [], [previous], [build('26.10.30', 3)], signature='pinned')
+        self.assertFalse(result['needed'])
+
+    def test_dated_helper_rebuild_counts_same_day_and_resets_next_day(self):
+        refs, builds = [ref('26.10.30', 3)], [build('26.10.30', 3)]
+        self.assertEqual(planner.plan('26.10.30', [], refs, builds, manual=True)['release'], 4)
+        self.assertEqual(planner.plan('26.10.31', [], refs, builds, manual=True)['release'], 1)
+
+    def test_client_revisions_are_independent_of_dated_helper_revision(self):
+        previous = dict(ref('26.10.30', 2), reservation={'channels': {
+            'stable': {'version': '1.2.3', 'release': 8},
+            'unstable': {'version': '2.0', 'release': 2}}})
+        builds = [build('26.10.30', 2)]
+        self.assertEqual(planner.channel_release('stable', '1.2.3', [previous], 1, builds), 9)
+        self.assertEqual(planner.channel_release('unstable', '2.0', [previous], 1, builds), 3)
+        self.assertEqual(planner.channel_release('stable', '1.2.4', [previous], 4, builds), 1)
+        self.assertEqual(planner.channel_release('unstable', '2.1', [previous], 4, builds), 1)
+
     def test_identical_channels_successfully_delivered_stop_schedule(self):
         result = planner.plan('1.2.3', [], [ref('1.2.3', 3)], [build('1.2.3', 3)], signature='pinned')
         self.assertFalse(result['needed'])
@@ -112,6 +144,57 @@ class PlanningTests(unittest.TestCase):
 
 
 class ReservationTests(unittest.TestCase):
+    def test_main_keeps_channel_revisions_when_reserving_dated_helper(self):
+        previous = dict(ref('1.2.3', 8), reservation={'channels': {
+            'stable': {'version': '1.2.3', 'release': 8},
+            'unstable': {'version': '2.0', 'release': 2}}})
+        api = mock.Mock()
+        api.reservations.return_value = [previous]
+        api.call.return_value = {'sha': 'b' * 40}
+        with tempfile.TemporaryDirectory() as tmp:
+            environment = {'GITHUB_REPOSITORY': 'owner/project', 'GH_TOKEN': 'private',
+                'GITHUB_SHA': 'a' * 40, 'SPOT_FLY_LIGHT_METADATA_DIR': tmp,
+                'GITHUB_OUTPUT': str(Path(tmp) / 'outputs'),
+                'COPR_CONFIG': '[copr-cli]\nlogin=l\nusername=u\ntoken=t\ncopr_url=https://copr.fedorainfracloud.org\n'}
+            identity = {'Version': '26.10.31', 'PackagedAt': '2026-10-31T05:00:00+01:00', 'Timezone': 'Europe/Stockholm'}
+            with (mock.patch.dict(os.environ, environment), mock.patch.object(planner.sys, 'argv', ['plan', '--event', 'workflow_dispatch']),
+                  mock.patch.object(planner, 'fetch_package', side_effect=[{'RPMVersion': '1.2.3'}, {'RPMVersion': '2.0'}]),
+                  mock.patch.object(planner, 'packaging_identity', return_value=identity),
+                  mock.patch.object(planner, 'GitHub', return_value=api),
+                  mock.patch.object(planner, 'copr_builds', return_value=[build('1.2.3', 8)]),
+                  mock.patch('sys.stdout', new_callable=io.StringIO)):
+                planner.main()
+            catalog = json.loads((Path(tmp) / 'source.json').read_text())
+            self.assertEqual(catalog['Bootstrap']['Version'], '26.10.31')
+            self.assertEqual(catalog['Bootstrap']['Release'], 1)
+            self.assertEqual(catalog['stable']['PackagingRelease'], 9)
+            self.assertEqual(catalog['unstable']['PackagingRelease'], 3)
+            self.assertIn('version=26.10.31\nrelease=1\ntag=spot-fly-light-v26.10.31-1\n',
+                          (Path(tmp) / 'outputs').read_text())
+            reserved = json.loads(api.call.call_args_list[0].args[1]['message'])
+            self.assertEqual(reserved['channels']['stable']['release'], 9)
+            self.assertEqual(reserved['bootstrap']['Version'], '26.10.31')
+
+    def test_date_collision_updates_only_helper_counter(self):
+        class API:
+            def __init__(self): self.messages = []
+            def call(self, path, data=None):
+                if path == '/git/tags':
+                    self.messages.append(json.loads(data['message']))
+                    return {'sha': 'b' * 40}
+                if data and data['ref'].endswith('-1'):
+                    raise HTTPError('https://api.github.com', 422, 'exists', {}, io.BytesIO())
+                return {}
+        api = API()
+        reservation = {'bootstrap': {'Version': '26.10.31', 'Release': 1},
+                       'channels': {'stable': {'version': '1.2.3', 'release': 9},
+                                    'unstable': {'version': '2.0', 'release': 3}}}
+        number, _ = planner.reserve(api, '26.10.31', 1, 'a' * 40, reservation)
+        self.assertEqual(number, 2)
+        self.assertEqual(api.messages[-1]['bootstrap']['Release'], 2)
+        self.assertEqual(api.messages[-1]['channels'], reservation['channels'])
+        self.assertEqual(reservation['bootstrap']['Release'], 1)
+
     def test_collision_gets_next_number_and_preserves_source_manifest(self):
         class API:
             def __init__(self): self.calls = []

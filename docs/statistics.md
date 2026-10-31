@@ -9,11 +9,13 @@ Spot..Light adds no OAuth flow, API traffic or usage telemetry.
 explain the developer-app identity. No developer API or VirusTotal credential is
 needed by the current package workflow. COPR submission uses `COPR_CONFIG`.
 
-`tools/download_stats.py` is a legacy report utility for GitHub release-asset
-`download_count` values. It can render a saved JSON snapshot, but the current
-policy does not publish new GitHub Release RPMs. Removing historical assets or
-releases removes their live counters. The tool must not be presented as a
-current client-usage or combined GitHub/COPR measurement.
+`tools/download_stats.py` reports GitHub RPM release-asset `download_count`
+values and can render a saved JSON snapshot. Under the current policy, newly
+published RPM assets may contain only the free installer, so their counters
+measure installer downloads, not Spotify client downloads or active use.
+The revised release workflow awaits verification. Removing historical assets
+or releases removes their live counters. The tool must not be presented as a
+client-usage or combined GitHub/COPR measurement.
 
 COPR's repository-download figures are separate. Downloads can include repeats,
 metadata or files fetched without an installation; they are not unique users,

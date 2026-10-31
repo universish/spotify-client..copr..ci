@@ -21,6 +21,7 @@ def scan(metadata_path, report_dir, run_url):
     spec = importlib.util.spec_from_file_location('spot_fly_light_ci', REPO / 'bootstrap/spot..fly..light.py')
     bootstrap = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(bootstrap)
+    catalog = json.loads(Path(metadata_path).read_text())
     records = {channel: bootstrap.metadata(metadata_path, channel) for channel in ('stable', 'unstable')}
     report_dir = Path(report_dir).resolve()
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +56,8 @@ def scan(metadata_path, report_dir, run_url):
                 'Scanner': 'ClamAV', 'DatabaseVersion': database_version,
             }
     # Publish no partial/new attestations if either channel was blocked.
+    if 'Bootstrap' in catalog:
+        records['Bootstrap'] = catalog['Bootstrap']
     Path(metadata_path).write_text(json.dumps(records, indent=2) + '\n')
 
 

@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 from urllib import error, request
 sys.path.insert(0, sys.argv[4])
-from parser_debian_control_file import REPOSITORIES
+from parser_debian_control_file import DOWNLOAD_BASES
 
 record = json.loads(Path(sys.argv[1]).read_text())
 version, directory = sys.argv[2], Path(sys.argv[3])
@@ -51,7 +51,7 @@ if sys.argv[5]:
         if os.path.exists(temporary):
             os.unlink(temporary)
     raise SystemExit(0)
-for base in REPOSITORIES:
+for base in DOWNLOAD_BASES:
     fd, temporary = tempfile.mkstemp(prefix=".spotify-download-", dir=directory)
     try:
         checksum, size = hashlib.sha256(), 0
@@ -80,5 +80,5 @@ for base in REPOSITORIES:
         if os.path.exists(temporary):
             os.unlink(temporary)
 else:
-    raise SystemExit("Neither official Spotify DEB download source is usable")
+    raise SystemExit("No configured source can supply the pinned original Spotify DEB")
 DOWNLOAD

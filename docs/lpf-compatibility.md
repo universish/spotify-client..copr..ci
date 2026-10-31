@@ -53,6 +53,13 @@ the same local package. A pool filename is not accepted as proof of channel
 membership. RPM Fusion references are checked last and cannot override the
 official DEB channel or hash.
 
+Current source discovery uses only the three official indexes listed in
+[the release flow](release-flow.md#schedule-and-source-selection). The configured
+unofficial mirror is only a byte-download fallback for the pinned official
+filename and must match its exact size/SHA256; it does not determine a channel
+or version. Local setup checks its private verified DEB cache before network
+fallback and does not run ClamAV.
+
 The following describes the legacy local comparison script, not the current
 user installer: `SPOTIFY_DEB_FILE=/path/to/cached.deb src/build_once.sh stable output` reuses a
 cached LPF source only when its size and SHA256 match the selected metadata.

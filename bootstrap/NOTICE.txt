@@ -1,163 +1,99 @@
-Spot..Light — SPOTIFY YEREL KURULUM HUKUKİ BİLDİRİMİ
+Spot..Light — LOCAL INSTALLATION LEGAL NOTICE
 
-Bu, Spotify tarafından onaylanmış bir paket değildir. Kurucu RPM Spotify
-uygulamasını içermez. Onay verirseniz resmî DEB kendi bilgisayarınıza indirilir,
-CI tarama kaydındaki SHA256 ile doğrulanır ve yerel RPM olarak oluşturulur.
-ClamAV yalnız GitHub Actions sanal makinesinde çalışır; bilgisayarınıza kurulmaz.
-Son kurulum için sistem yetkisi istenir.
+Spot..Light is an independent community installer and launcher. It is not
+approved, endorsed or supported by Spotify, Fedora or Red Hat. The public
+spot-fly-light RPM contains only the freely licensed installer and source
+metadata; it does not contain the Spotify application, logo or proprietary
+application archive. Its terminal command is spot..fly..light. The locally
+built client package is spot-fly-light-client-local.
 
-Spotify'ın ülkenize uygulanan koşullarını okuyup bunlara uymalısınız:
+TERMS AND OWNERSHIP
+
+Read and comply with Spotify's current terms applicable to your country:
+https://www.spotify.com/legal/end-user-agreement/
+Regional reference for users in Türkiye:
 https://www.spotify.com/tr-tr/legal/end-user-agreement/
-Bu bildirim Spotify koşullarının yerine geçmez; yeni bir Spotify lisansı veya
-istemci RPM'sini yeniden dağıtma izni vermez. Yerel istemci RPM'sini paylaşmayın.
+Official Linux client information:
+https://www.spotify.com/download/linux/
 
-Paketleme araçları, kanunun izin verdiği ölçüde, garanti verilmeksizin sunulur.
-Tarama bilinmeyen bütün tehditleri dışlayamaz. Kendi kullanımınız, hesabınız,
-yedekleriniz ve koşullara uyumunuz sizin sorumluluğunuzdadır. Bu onay bakımcının
-kendi yükümlülüklerini kaldırmaz; zorunlu haklarınızdan feragat anlamına gelmez.
+This community notice is not Spotify's EULA. It does not replace or modify
+Spotify's terms, grant an additional Spotify license, or grant permission to
+redistribute the client RPM. Spotify and its licensors retain ownership of
+the application, content and brand. Download availability and personal-use
+permission do not by themselves establish permission to publicly host
+repackaged proprietary RPMs or SRPMs. Do not share the locally built client RPM.
 
-Reddederseniz indirme, paketleme ve çalıştırma durur. Bizim spot-fly-light-client-local
-paketimiz kuruluysa sistem yetkilendirmesiyle kaldırılması istenir. Yetki
-verilmezse veya işlem başarısızsa paket kurulu kalabilir; başlatıcı yine onu
-çalıştırmaz. Mevcut LPF/vendor paketiniz otomatik kaldırılmaz. Küçük kurucu RPM
-ayrıca paket yöneticinizle kaldırılabilir.
+Original vendor files and embedded third-party notices are preserved,
+including Apps/native-licenses.html. The community helper's own license does
+not license Spotify. See LICENSE and COPYRIGHT for scope and attribution.
+The project name is not a claim that trademark clearance or registration has
+been completed. Historical repository identifiers do not indicate sponsorship.
 
-Aşağıda ayrıntılı topluluk bildirimi ve sorumluluk reddi bulunur.
+INSTALLATION AND SCANNING
 
-Spot..Light — SPOTIFY LOCAL INSTALLATION LEGAL NOTICE
+If you approve, the installer downloads the selected official DEB on your
+computer, verifies its size and SHA256 against the CI-scanned source record,
+unpacks it without executing Debian maintainer scripts and builds a local RPM.
+Only the final package-manager installation or removal requests system
+authorization. Run setup as your normal user.
 
-This is not a package approved by Spotify. The installer RPM does not contain the Spotify
-application. If you give your consent, the official DEB file will be downloaded to your computer,
-verified against the CI-scanned source hash, and built as a local RPM. ClamAV runs only
-in the GitHub Actions VM; it is not installed or run on your computer. System permissions
-are required for the final installation.
+Official metadata determines the selected channel, version and source hash.
+A configured third-party download fallback may supply only the same pinned
+DEB and must match its official size and SHA256; it does not select versions.
 
-You must read and comply with Spotify’s terms and conditions applicable to your country:
-https://www.spotify.com/legal/end-user-agreement/
-This notice does not replace Spotify’s terms and conditions; it does not grant a new Spotify license or
-permission to redistribute the client RPM. Do not share the local client RPM.
+ClamAV runs only in the GitHub Actions VM. It is not installed or run on your
+computer. CI updates ClamAV signatures and scans the official DEBs and their
+extracted contents. Malware detections, scan errors and exceeded limits stop
+publication. PUA-only matches are reported separately. The installer includes
+a scan record bound to the official source hash, not the application payload.
+A clean scan and matching hash cannot establish absence of every threat or
+future vulnerability and do not grant legal permission.
 
-Packaging tools are provided “as is,” to the extent permitted by law, without warranty.
-Scanning cannot rule out all unknown threats. Your use, account,
-backups, and compliance with the terms are your responsibility. This acknowledgment does not
-relieve the maintainer of their own liabilities; it does not constitute a waiver of your statutory rights.
+Downloading, hash verification, unpacking, local RPM compression and package-
+manager dependency resolution can take time. Progress messages identify the
+current stage; waiting does not mean a local antivirus scan is taking place.
 
-If you decline, the download, packaging, and execution will stop. If our spot-fly-light-client-local
-package is installed, system authorization is required for its removal. If
-authorization is not granted or the operation fails, the package may remain installed; the launcher will still not
-run it. Your existing LPF/vendor package will not be automatically removed. The small installer RPM
-can also be removed using your package manager.
+Stable is selected by default for setup and update. The explicit -unstable
+option selects testing for that operation. Both channels replace the same
+local client package; concurrent stable/testing installations are unsupported.
+Returning to stable can install an older version.
 
-A detailed community notice and disclaimer are provided below.
+CONSENT, DECLINING AND MIGRATION
 
+Approval requests this local installation after review of this notice and
+Spotify's applicable terms. Approval is specific to the notice and selected
+source/version context; an update can require renewed approval.
 
-SPOTIFY CLIENT — THIRD-PARTY TERMS NOTICE
+Declining stops download, build and launch. If this project's current local
+client package is installed, its removal is requested through system
+authorization. If authorization is denied or removal fails, it may remain
+installed, but this launcher refuses to run it. The small installer RPM can
+be removed separately using your system package manager.
 
-This notice is maintained by an independent community packaging project.
-It is not Spotify's EULA and does not replace or modify Spotify's agreement.
-It does not grant rights to redistribute Spotify or its proprietary resources.
+Before downloading, the installer checks for conflicting packages. A previous
+local target is eligible for replacement only when identified as this
+project's own package. Unrelated LPF or other vendor installations are not
+silently removed. Review the proposed package-manager transaction before
+authorizing it. Earlier configuration files and historical evidence are
+preserved; migration does not carry forward an earlier consent record.
 
-Spotify's current terms applicable to your country govern use of its client and
-service. Review them directly before using the application:
-https://www.spotify.com/legal/end-user-agreement/
-Turkish terms: https://www.spotify.com/tr-tr/legal/end-user-agreement/
-Linux client: https://www.spotify.com/download/linux/
+RESPONSIBILITY AND DISCLAIMER
 
-Spotify and its licensors retain ownership of the application, content and
-brand. The published terms restrict redistribution, sale or transfer of the
-service/content. Download availability and personal-use permission do not by
-themselves establish permission to publicly host repackaged RPMs or SRPMs.
+Packaging helpers are provided AS IS, without warranties, to the extent
+permitted by applicable law. You remain responsible for your own use, account,
+backups and compliance obligations. Consent does not remove the maintainer's
+own obligations, exclude non-excludable liability, waive mandatory rights,
+create an indemnity binding third parties or release everyone from liability.
+See DISCLAIMER.txt for the community packaging disclaimer.
 
-Preserve Spotify's embedded notices and the bundled third-party licenses,
-including Apps/native-licenses.html. Packaging scripts have separate licensing;
-see LICENSE and COPYRIGHT. No Spotify rights are granted by that script license.
+COPR and GitHub Releases distribute only the freely licensed installer.
+GitHub release assets are limited to its payload-free RPM/SRPM and checksums;
+the Spotify DEB, extracted application and locally built client RPM are not
+published there. Hosting, consent, scan results, license evidence and time
+stamps do not constitute Spotify's approval or a redistribution license.
+COPR hosting does not transfer the maintainer's responsibilities to Fedora,
+Red Hat, Spotify, the build service or the user.
 
-The community package carries no claim of Spotify endorsement or support.
-CI malware scans and local hash checks do not establish legal permission or absolute safety.
-A local build or installation does not constitute acceptance on Spotify's behalf.
-Do not upload proprietary payloads without an applicable permission basis and
-compliance with the host's rules. Local notices cannot waive mandatory legal
-rights or shift all legal responsibility to users.
-
-CONSENT AND RESPONSIBILITY
-
-Requesting the local installation confirms that you have reviewed this notice
-and Spotify's applicable terms. You are responsible for your own use and
-compliance. See DISCLAIMER.txt for the community packaging disclaimer. Consent
-does not waive mandatory rights or remove the maintainer's own obligations.
-Declining cancels download/build/launch; an installed spot-fly-light-client-local
-package is submitted for removal through system authorization. Authorization
-failure can prevent removal; this launcher will still refuse to run it.
-
-COMMUNITY PACKAGING DISCLAIMER
-
-This is an independent community bootstrap, not an official Spotify product.
-Spotify has not endorsed or provided support for this package.
-
-Spotify software and content remain subject to Spotify's applicable terms and
-the rights of its licensors. You must review and comply with those terms and
-applicable law before requesting a download, local build, installation or use.
-This project grants no additional Spotify license or redistribution right.
-
-The packaging helpers are provided AS IS, without warranties, to the extent
-permitted by applicable law. CI malware scanning and local hash verification reduce
-certain risks but cannot establish absence of every threat or defect.
-
-You decide whether to request the local build and installation, and remain
-responsible for your own use, account, backups and compliance obligations.
-This notice does not transfer the maintainer's own legal obligations to you,
-exclude non-excludable liability, waive mandatory consumer rights, or create
-permission to host proprietary Spotify binaries. Clicking consent is a request
-to proceed under the applicable terms, not a universal release from liability.
-
-If you decline, the bootstrap does not download/build or launch the client.
-If this project's spot-fly-light-client-local package is installed, it requests its
-removal through the system authorization dialog. If permission is denied or
-removal fails, the client remains installed but this launcher refuses to run it.
-Existing LPF/vendor packages are not silently removed. The small payload-free
-bootstrap itself can be removed through your system package manager.
-
-CURRENT NAMING AND HOSTING NOTICE — 2026-10-31
-
-Spot..Light is the independent community installer and launcher. The public
-bootstrap RPM is named spot-fly-light and its command is spot..fly..light.
-The locally generated target is named spot-fly-light-client-local. Spotify remains the name of the original
-third-party application; Spot..Light does not rename that application's ownership.
-The historical repository/COPR identifiers identify compatibility and project
-provenance, not Spotify or Fedora sponsorship. The name Spot..Light is not a
-representation that a trademark search or registration has been completed.
-
-COPR hosts only the freely licensed bootstrap. This workflow does not publish
-RPM assets in GitHub Releases. Selecting COPR does not transfer the maintainer's
-responsibilities to Fedora, Red Hat, Spotify, the build service or the user.
-Do not represent COPR hosting, scan results, consent, license evidence or a
-time stamp as Spotify's approval or as permission to redistribute its client.
-
-Stable is the default for setup/update. The explicit -unstable option selects
-the testing channel for that operation. Both channels replace the same local
-client package; separate concurrent stable/unstable installations are not
-supported. A channel switch may install an older version when returning to
-stable. Original vendor files and bundled notices are preserved.
-
-This active notice replaces historical package names in the archived root
-eula.txt and DISCLAIMER.txt; it does not replace or expand Spotify's terms.
-The original timestamped evidence remains available unchanged in the source tree.
-
-SCANNING AND SOURCE INTEGRITY
-
-The GitHub Actions VM temporarily downloads and unpacks the selected official
-DEBs, updates ClamAV and runs the mandatory malware and separate PUA passes.
-Malware, scan errors and limits stop delivery; PUA-only matches are reported
-separately. The bootstrap contains a scan record bound to the official source
-hash. Your computer downloads the same DEB and checks its size and SHA256
-before unpacking and building the client. It does not run ClamAV. CI scan
-results do not guarantee absence of unknown threats or future vulnerabilities.
-
-PREVIOUS COMMUNITY PACKAGE NAMES
-
-Spot..Light is the current name of this project's independent helper. RPM
-replacement metadata applies only to this project's previous sonicradle and
-sonicradle-client-local packages. Existing LPF, spotify-client or other vendor
-packages are not silently removed. Review any proposed package-manager
-transaction before authorizing it. Earlier names remain in historical source
-and timestamp records; they do not identify additional current commands.
+The archived root notices and timestamp evidence remain historical records.
+This active notice updates operational details without changing the scope of
+any original license or Spotify agreement.

@@ -1,0 +1,8 @@
+[Unit]
+Description=Offer Spot..Light client channel setup in the desktop session
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/share/spot..fly..light-bootstrap/onboarding.py
+TimeoutStartSec=0

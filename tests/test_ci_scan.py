@@ -15,12 +15,12 @@ RUN = 'https://github.com/owner/project/actions/runs/123'
 
 
 class CIScanTests(unittest.TestCase):
-    def execute(self, fail_channel=None):
+    def execute(self, fail_channel=None, bootstrap=None):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         metadata = root / 'source.json'
-        metadata.write_text('{"untouched":true}')
+        metadata.write_text(json.dumps({'untouched': True, **({'Bootstrap': bootstrap} if bootstrap else {})}))
         records = {channel: {'SHA256': channel + '-digest'} for channel in ('stable', 'unstable')}
         events, scanned_paths = [], []
         def download(record, path):
@@ -64,6 +64,11 @@ class CIScanTests(unittest.TestCase):
         records, events = self.execute(fail_channel='unstable')
         self.assertEqual(records, {'untouched': True})
 
+    def test_packaging_date_identity_survives_both_scans(self):
+        identity={'Version':'26.10.31','Release':1,'Timezone':'Europe/Stockholm','PackagedAt':'2026-10-31T00:00:00+01:00'}
+        records, events=self.execute(bootstrap=identity)
+        self.assertEqual(records['Bootstrap'],identity)
+
     def test_unverifiable_run_url_rejected(self):
         with self.assertRaises(ValueError): scanner.scan('unused', 'unused', 'https://example.invalid/run')
 
@@ -80,9 +85,26 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn('clamav', makefile)
         self.assertNotIn('dnf ', makefile)
 
-    def test_no_github_release_or_package_artifacts(self):
+    def test_github_release_is_gated_and_artifacts_contain_reports_only(self):
         workflow = (REPO / '.github/workflows/spotify-rpm-releases.yml').read_text()
-        self.assertNotIn('gh release ', workflow)
+        copr = workflow.index('run: bash tools/submit_copr.sh')
+        gate = workflow.index('python3 tools/verify_release_payload.py')
+        draft = workflow.index('gh release create ')
+        publish = workflow.index('gh release edit ')
+        cleanup = workflow.index('      - name: Remove transient RPMs')
+        self.assertLess(copr, gate)
+        self.assertLess(gate, draft)
+        self.assertLess(draft, publish)
+        self.assertLess(publish, cleanup)
+        release_step = workflow.split('      - name: Verify and publish only the payload-free bootstrap to GitHub Releases', 1)[1].split('      - name:', 1)[0]
+        self.assertIn("if: steps.version.outputs.needed == 'true'", release_step)
+        self.assertIn('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}', release_step)
+        self.assertIn('SPOT_FLY_LIGHT_TAG: ${{ steps.version.outputs.tag }}', release_step)
+        self.assertIn('--verify-tag --draft', release_step)
+        self.assertIn('gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --latest', release_step)
+        self.assertIn('--notes-file output/release-notes.md output/spot-fly-light-*.src.rpm output/spot-fly-light-*.x86_64.rpm output/SHA256SUMS', release_step)
+        self.assertNotIn('output/*.rpm', release_step)
+        self.assertNotIn('client-local', release_step)
         self.assertNotIn('download-artifact', workflow)
         artifact_paths = workflow.split('          path: |', 1)[1]
         self.assertNotIn('*.rpm', artifact_paths)
