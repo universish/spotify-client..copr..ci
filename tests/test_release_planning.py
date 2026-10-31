@@ -238,6 +238,92 @@ class ReservationTests(unittest.TestCase):
         self.assertNotIn('highly-private', str(raised.exception))
 
 
+class FinalizationTests(unittest.TestCase):
+    def catalog(self):
+        return {'Bootstrap': {'Version': '26.10.31', 'Release': 1, 'Timezone': 'Europe/Stockholm',
+                    'PackagedAt': '2026-10-31T23:40:00+01:00'},
+                'stable': {'RPMVersion': '1.2.3', 'PackagingRelease': 9, 'SHA256': 'a' * 64,
+                    'ScanAttestation': {'Malware': 'clean', 'SHA256': 'a' * 64}},
+                'unstable': {'RPMVersion': '2.0', 'PackagingRelease': 3, 'SHA256': 'b' * 64,
+                    'ScanAttestation': {'Malware': 'clean', 'SHA256': 'b' * 64}}}
+
+    def test_same_day_finalization_updates_time_without_network_or_new_reservation(self):
+        catalog = self.catalog()
+        current = {'Version': '26.10.31', 'Timezone': 'Europe/Stockholm', 'PackagedAt': '2026-10-31T23:55:00+01:00'}
+        with tempfile.TemporaryDirectory() as tmp:
+            path, outputs = Path(tmp) / 'source.json', Path(tmp) / 'outputs'
+            path.write_text(json.dumps(catalog))
+            with (mock.patch.object(planner, 'packaging_identity', return_value=current),
+                  mock.patch.object(planner, 'GitHub') as github, mock.patch.object(planner, 'copr_builds') as copr,
+                  mock.patch.object(planner, 'fetch_package') as fetch,
+                  mock.patch.object(planner.sys, 'argv', ['plan', '--finalize', str(path)]),
+                  mock.patch.dict(os.environ, {'GITHUB_OUTPUT': str(outputs)}),
+                  mock.patch('sys.stdout', new_callable=io.StringIO)):
+                planner.main()
+            updated = json.loads(path.read_text())
+            self.assertEqual(updated['Bootstrap'], dict(current, Release=1))
+            self.assertEqual(updated['stable'], catalog['stable'])
+            self.assertEqual(updated['unstable'], catalog['unstable'])
+            self.assertIn('version=26.10.31\nrelease=1\ntag=spot-fly-light-v26.10.31-1\n', outputs.read_text())
+            github.assert_not_called()
+            copr.assert_not_called()
+            fetch.assert_not_called()
+
+    def test_cross_midnight_reservation_preserves_scans_and_client_counters(self):
+        catalog = self.catalog()
+        current = {'Version': '26.11.01', 'Timezone': 'Europe/Stockholm', 'PackagedAt': '2026-11-01T00:05:00+01:00'}
+        api = mock.Mock()
+        api.reservations.return_value = [ref('26.11.01', 1)]
+        api.call.return_value = {'sha': 'b' * 40}
+        environment = {'GH_TOKEN': 'private', 'GITHUB_SHA': 'a' * 40,
+            'COPR_CONFIG': '[copr-cli]\nlogin=l\nusername=u\ntoken=t\ncopr_url=https://copr.fedorainfracloud.org\n'}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'source.json'
+            path.write_text(json.dumps(catalog))
+            with (mock.patch.object(planner, 'packaging_identity', return_value=current),
+                  mock.patch.object(planner, 'GitHub', return_value=api),
+                  mock.patch.object(planner, 'copr_builds', return_value=[]),
+                  mock.patch.object(planner, 'fetch_package') as fetch,
+                  mock.patch.dict(os.environ, environment)):
+                result, _ = planner.finalize(path, 'owner/project')
+            updated = json.loads(path.read_text())
+            self.assertEqual((result['version'], result['release'], result['tag']),
+                             ('26.11.01', 2, 'spot-fly-light-v26.11.01-2'))
+            self.assertEqual(updated['Bootstrap'], dict(current, Release=2))
+            self.assertEqual(updated['stable'], catalog['stable'])
+            self.assertEqual(updated['unstable'], catalog['unstable'])
+            reservation = json.loads(api.call.call_args_list[0].args[1]['message'])
+            self.assertEqual(reservation['signature'], planner.source_signature(catalog))
+            self.assertEqual(reservation['channels'], {'stable': {'version': '1.2.3', 'release': 9},
+                                                       'unstable': {'version': '2.0', 'release': 3}})
+            self.assertEqual(reservation['bootstrap'], dict(current, Release=2))
+            fetch.assert_not_called()
+
+    def test_cross_midnight_missing_credentials_preserves_metadata(self):
+        for token, config in (('', ''), ('private', 'invalid')):
+            with self.subTest(token=bool(token)), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / 'source.json'
+                original = json.dumps(self.catalog())
+                path.write_text(original)
+                with (mock.patch.object(planner, 'packaging_identity', return_value={'Version': '26.11.01'}),
+                      mock.patch.object(planner, 'GitHub') as github,
+                      mock.patch.dict(os.environ, {'GH_TOKEN': token, 'COPR_CONFIG': config})):
+                    with self.assertRaises(ValueError): planner.finalize(path, 'owner/project')
+                self.assertEqual(path.read_text(), original)
+                github.assert_not_called()
+
+    def test_same_day_dry_run_preserves_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'source.json'
+            original = json.dumps(self.catalog())
+            path.write_text(original)
+            with mock.patch.object(planner, 'packaging_identity', return_value={
+                    'Version': '26.10.31', 'Timezone': 'Europe/Stockholm', 'PackagedAt': '2026-10-31T23:55:00+01:00'}):
+                result, _ = planner.finalize(path, 'owner/project', dry_run=True)
+            self.assertEqual(result['release'], 1)
+            self.assertEqual(path.read_text(), original)
+
+
 class SpecReleaseTests(unittest.TestCase):
     def test_reserved_number_used_in_legacy_local_spec(self):
         with tempfile.TemporaryDirectory() as tmp:

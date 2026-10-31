@@ -99,7 +99,11 @@ class WorkflowContractTests(unittest.TestCase):
         release_step = workflow.split('      - name: Verify and publish only the payload-free bootstrap to GitHub Releases', 1)[1].split('      - name:', 1)[0]
         self.assertIn("if: steps.version.outputs.needed == 'true'", release_step)
         self.assertIn('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}', release_step)
-        self.assertIn('SPOT_FLY_LIGHT_TAG: ${{ steps.version.outputs.tag }}', release_step)
+        self.assertIn('SPOT_FLY_LIGHT_TAG: ${{ steps.packaging.outputs.tag }}', release_step)
+        finalizer=workflow.index('python3 tools/plan_release.py --finalize')
+        self.assertLess(workflow.index('run: python3 tools/scan_sources.py'),finalizer)
+        self.assertLess(finalizer,workflow.index('python3 tools/build_bootstrap.py'))
+        self.assertIn('SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}',release_step)
         self.assertIn('--verify-tag --draft', release_step)
         self.assertIn('gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --latest', release_step)
         self.assertIn('--notes-file output/release-notes.md output/spot-fly-light-*.src.rpm output/spot-fly-light-*.x86_64.rpm output/SHA256SUMS', release_step)

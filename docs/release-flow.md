@@ -45,6 +45,11 @@ versions separately. The catalog records installer identity under `Bootstrap`
 and keeps stable/unstable upstream metadata distinct. The local target is named
 `spot-fly-light-client-local` for both channels. A switch replaces that single package instead of creating side-by-side stable/testing installs.
 
+After scanning, the workflow confirms Stockholm's date immediately before
+packaging. If scanning crossed midnight, it reserves a new date-based helper
+tag while preserving the scanned DEB identities and independent client counters.
+The previous reservation remains historical evidence; it is not rewritten.
+
 The planner compares the selected source signature with previously delivered
 metadata. A scheduled check with an unchanged delivered signature stops before
 build/scanning/COPR submission. A change to either channel requires a new

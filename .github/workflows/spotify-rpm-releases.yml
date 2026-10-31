@@ -49,11 +49,18 @@ jobs:
         env:
           TMPDIR: /tmp
         run: python3 tools/scan_sources.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output/scan-reports
+      - name: Confirm the Stockholm packaging date after scanning
+        id: packaging
+        if: steps.version.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: python3 tools/plan_release.py --finalize "$RUNNER_TEMP/spot..fly..light-metadata/source.json"
       - name: Build payload-free bootstrap RPMs
         if: steps.version.outputs.needed == 'true'
         env:
-          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
-          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
         run: |
           python3 tools/build_bootstrap.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output
           src/build_binary.sh output/spot-fly-light-*.src.rpm output
@@ -63,16 +70,16 @@ jobs:
         if: steps.version.outputs.needed == 'true'
         env:
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
-          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
-          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
         run: bash tools/submit_copr.sh output/spot-fly-light-*.src.rpm output
       - name: Verify and publish only the payload-free bootstrap to GitHub Releases
         if: steps.version.outputs.needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SPOT_FLY_LIGHT_VERSION: ${{ steps.version.outputs.version }}
-          SPOT_FLY_LIGHT_RELEASE: ${{ steps.version.outputs.release }}
-          SPOT_FLY_LIGHT_TAG: ${{ steps.version.outputs.tag }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
+          SPOT_FLY_LIGHT_TAG: ${{ steps.packaging.outputs.tag }}
         run: |
           python3 tools/verify_release_payload.py output --version "$SPOT_FLY_LIGHT_VERSION" --release "$SPOT_FLY_LIGHT_RELEASE" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           gh release create "$SPOT_FLY_LIGHT_TAG" --verify-tag --draft --title "Spot..Light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" --notes-file output/release-notes.md output/spot-fly-light-*.src.rpm output/spot-fly-light-*.x86_64.rpm output/SHA256SUMS

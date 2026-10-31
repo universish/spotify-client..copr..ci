@@ -195,14 +195,67 @@ def reserve(github, version, number, sha, reservation=None):
     raise RuntimeError('Could not reserve a unique packaging number after 20 collisions')
 
 
+def finalize(metadata_path, repository, dry_run=False):
+    """Bind the helper's date to packaging time after potentially lengthy scans."""
+    path = Path(metadata_path)
+    catalog = json.loads(path.read_text(encoding='utf-8'))
+    try:
+        old = catalog['Bootstrap']
+        packaged = datetime.fromisoformat(old['PackagedAt'])
+        if (old['Timezone'] != PACKAGING_ZONE or packaged.utcoffset() is None
+                or old['Version'] != packaged.astimezone(ZoneInfo(PACKAGING_ZONE)).strftime('%y.%m.%d')
+                or type(old['Release']) is not int or old['Release'] < 1):
+            raise ValueError()
+        channels = {channel: catalog[channel] for channel in ('stable', 'unstable')}
+        pins = {channel: {'version': record['RPMVersion'], 'release': record['PackagingRelease']}
+                for channel, record in channels.items()}
+        if any(not re.fullmatch(r'[A-Za-z0-9.+~]+', pin['version'])
+               or type(pin['release']) is not int or pin['release'] < 1 for pin in pins.values()):
+            raise ValueError()
+    except (KeyError, TypeError, ValueError):
+        raise ValueError('Finalization requires a reserved helper and both pinned client channels') from None
+    bootstrap = packaging_identity()
+    version = bootstrap['Version']
+    if version == old['Version']:
+        result = {'needed': True, 'version': version, 'release': old['Release'],
+                  'tag': f"spot-fly-light-v{version}-{old['Release']}",
+                  'reason': 'Confirmed the Stockholm packaging date after upstream scanning.'}
+    else:
+        if not dry_run:
+            if not os.environ.get('GH_TOKEN'):
+                raise ValueError('GH_TOKEN is required to reserve a packaging number')
+            require_copr_config(os.environ.get('COPR_CONFIG', ''))
+        signature = source_signature(channels)
+        github = GitHub(repository, os.environ.get('GH_TOKEN', ''))
+        result = plan(version, [], github.reservations(), copr_builds(), manual=True, signature=signature)
+        if not dry_run:
+            result['release'], result['tag'] = reserve(github, version, result['release'], os.environ.get('GITHUB_SHA', ''),
+                {'schema': 2, 'signature': signature, 'channels': pins,
+                 'bootstrap': dict(bootstrap, Release=result['release'])})
+        result['reason'] = 'Stockholm date changed during scanning; reserved the actual packaging date without changing client pins.'
+    bootstrap['Release'] = result['release']
+    if not dry_run:
+        catalog['Bootstrap'] = bootstrap
+        path.write_text(json.dumps(catalog, indent=2) + '\n', encoding='utf-8')
+    return result, channels
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--event', choices=('schedule', 'workflow_dispatch'), required=True)
+    parser.add_argument('--event', choices=('schedule', 'workflow_dispatch'))
+    parser.add_argument('--finalize', metavar='METADATA', help='Confirm the Stockholm packaging date after scanning')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
+    if bool(args.event) == bool(args.finalize):
+        parser.error('Specify exactly one of --event or --finalize')
     repository = os.environ.get('GITHUB_REPOSITORY', REPOSITORY)
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
         raise ValueError('Invalid repository')
+    if args.finalize:
+        result, channels = finalize(args.finalize, repository, args.dry_run)
+        version = result['version']
+        report(result, channels, version)
+        return
     channels = {channel: fetch_package(channel) for channel in ('stable', 'unstable')}
     bootstrap = packaging_identity()
     version = bootstrap['Version']
@@ -228,6 +281,10 @@ def main():
         directory = Path(os.environ.get('SPOT_FLY_LIGHT_METADATA_DIR', 'metadata'))
         directory.mkdir(parents=True, exist_ok=True)
         (directory / 'source.json').write_text(json.dumps(dict(channels, Bootstrap=bootstrap), indent=2) + '\n', encoding='utf-8')
+    report(result, channels, version)
+
+
+def report(result, channels, version):
     print(json.dumps(result))
     if output := os.environ.get('GITHUB_OUTPUT'):
         with open(output, 'a', encoding='utf-8') as stream:
