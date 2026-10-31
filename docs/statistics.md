@@ -13,9 +13,14 @@ needed by the current package workflow. COPR submission uses `COPR_CONFIG`.
 values and can render a saved JSON snapshot. Under the current policy, newly
 published RPM assets may contain only the free installer, so their counters
 measure installer downloads, not Spotify client downloads or active use.
-The revised release workflow awaits verification. Removing historical assets
-or releases removes their live counters. The tool must not be presented as a
-client-usage or combined GitHub/COPR measurement.
+[Installer release 26.10.31-1](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1)
+is published with exactly its payload-free SRPM, x86_64 RPM and `SHA256SUMS`.
+Its RPM asset counters therefore measure downloads of this installer. The
+release was completed manually after successful CI scanning and all 17 COPR
+target builds; the automatic workflow stopped at a documentation/license-path gate.
+That gate was corrected, but the entire workflow has not been rerun afterward.
+Removing historical assets or releases removes their live counters. The tool
+must not be presented as a client-usage or combined GitHub/COPR measurement.
 
 COPR's repository-download figures are separate. Downloads can include repeats,
 metadata or files fetched without an installation; they are not unique users,

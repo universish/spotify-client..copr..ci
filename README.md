@@ -1,19 +1,22 @@
 # Spot..Light Local RPM Installer — universish
 
-> The next installer includes date-based versioning, channel selection, English
-> notices, verified migration and detailed progress. Publication awaits
-> verification; the completed release below remains historical evidence.
+> **31 October 2026:** Installer `spot-fly-light-26.10.31-1` is available in
+> [COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+> (17 successful targets) and [GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1).
+> It adds date-based versioning, desktop channel selection, English notices,
+> verified migration, private source caching and detailed live progress.
 
 The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
 and its terminal command is **`spot..fly..light`**. **`spot-fly-light`** is an
 equivalent command alias. RPM package names cannot contain `..`, so the package
 uses hyphens while the primary command keeps the chosen spelling.
 
-> **31 October 2026:** Bootstrap `spot-fly-light-1.2.95.453.g0eeebbed-8`
-> built successfully for all 17 targets in [COPR build 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/).
-> [Actions run 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
-> records the CI scans and delivery. The bootstrap contains both stable and
-> testing source records in the same installer.
+The installed catalog offers stable `1.2.95.453.g0eeebbed` (client revision 9)
+and unstable `1.3.4.258.gc60b10b0946a` (client revision 3). Both original DEBs
+passed mandatory malware scans in [Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674).
+That run's initial GitHub upload gate stopped on Ubuntu documentation paths;
+the gate was corrected and the verified helper assets were published separately.
+See [validation evidence](docs/validation.md) for delivery details and history.
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.
@@ -84,6 +87,15 @@ spot..fly..light --gpu-mode=native
 ```
 
 ## Versions and command help
+
+For a manual Actions build, `spotify_version` accepts either a complete Spotify
+version (`1.2.95.453.g0eeebbed`) or its four numeric parts (`1.2.95.453`). Leave it
+blank for the current channels. `spotify_channel=auto` infers the channel; choose
+`stable` or `unstable` if the version is ambiguous. Only versions advertised with
+complete metadata in an accessible official index can be selected. The resolved
+full version determines the client revision counter; the installer retains its
+own date-based version. The other channel stays available in the same installer.
+This new manual selector remains untested and untriggered at the owner's request.
 
 The installer has its own date-based version. DNF's package description lists
 both pinned Spotify client versions; it does not label the installer with

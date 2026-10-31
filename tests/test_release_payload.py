@@ -54,6 +54,36 @@ class ReleasePayloadTests(unittest.TestCase):
         records=gate.check_source(source_archive(),'26.10.31',1,RUN)
         gate.check_binary(binary_files(records),records)
 
+    def test_standard_versioned_documentation_directories_are_accepted(self):
+        for doc_versioned in (False, True):
+            for license_versioned in (False, True):
+                files=binary_files()
+                for prefix,versioned in [('usr/share/doc/',doc_versioned),('usr/share/licenses/',license_versioned)]:
+                    if versioned:
+                        for name in list(files):
+                            if name.startswith(prefix+'spot-fly-light/'):
+                                files[name.replace(prefix+'spot-fly-light/',prefix+'spot-fly-light-26.10.31/',1)]=files.pop(name)
+                self.assertEqual(len(files),16)
+                gate.check_binary(files,catalog())
+
+    def test_versioned_documentation_never_allows_foreign_versions_duplicates_or_changed_bytes(self):
+        for failure in ('foreign-version','duplicate','changed-notice','changed-license'):
+            files=binary_files()
+            for name in list(files):
+                if name.startswith(('usr/share/doc/spot-fly-light/','usr/share/licenses/spot-fly-light/')):
+                    replacement=name.replace('/spot-fly-light/','/spot-fly-light-26.10.31/',1)
+                    files[replacement]=files.pop(name)
+            if failure=='foreign-version':
+                files={name.replace('/spot-fly-light-26.10.31/','/spot-fly-light-26.11.01/'):data for name,data in files.items()}
+            elif failure=='duplicate':
+                files['usr/share/doc/spot-fly-light/eula.txt']=gate.SOURCES['eula.txt'].read_bytes()
+            elif failure=='changed-notice':
+                files['usr/share/doc/spot-fly-light-26.10.31/eula.txt']+=b'changed'
+            else:
+                files['usr/share/licenses/spot-fly-light-26.10.31/MIT-new-contributions.txt']+=b'changed'
+            with self.subTest(failure=failure),self.assertRaises(ValueError):
+                gate.check_binary(files,catalog())
+
     def test_deb_or_proprietary_resource_inside_source_blocks_publication(self):
         for name in ('spotify.deb','Apps/login.spa','spotify','icons/spotify.png'):
             with self.subTest(name=name),self.assertRaisesRegex(ValueError,'Unexpected file'):

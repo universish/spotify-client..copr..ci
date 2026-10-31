@@ -118,10 +118,23 @@ def check_source(data, version, release, run_url):
 
 def check_binary(files, catalog):
     prefix = 'usr/share/spot..fly..light-bootstrap/'
+    version = catalog.get('Bootstrap', {}).get('Version', '')
+    if not re.fullmatch(r'[0-9]{2}[.][0-9]{2}[.][0-9]{2}', version):
+        raise ValueError('Invalid bootstrap catalog version')
+    # Fedora uses name-only documentation directories; Debian RPM macros append
+    # the package version. Accept only these two exact layouts, with no extra files.
+    notices = ('COPYRIGHT', 'DISCLAIMER.txt', 'eula.txt')
+    doc_prefix = next((f'usr/share/doc/{directory}/' for directory in ('spot-fly-light', f'spot-fly-light-{version}')
+                       if all(f'usr/share/doc/{directory}/{name}' in files for name in notices)), None)
+    license_path = next((f'usr/share/licenses/{directory}/MIT-new-contributions.txt'
+                         for directory in ('spot-fly-light', f'spot-fly-light-{version}')
+                         if f'usr/share/licenses/{directory}/MIT-new-contributions.txt' in files), None)
+    if doc_prefix is None or license_path is None:
+        raise ValueError('Unexpected file in bootstrap binary payload')
     expected = {prefix + name for name in (*SHARE_NAMES, 'source.json')}
     expected.update(DESKTOP_FILES)
-    expected.update('usr/share/doc/spot-fly-light/' + name for name in ('COPYRIGHT', 'DISCLAIMER.txt', 'eula.txt'))
-    expected.update(('usr/share/licenses/spot-fly-light/MIT-new-contributions.txt', 'usr/bin/spot..fly..light', 'usr/bin/spot-fly-light'))
+    expected.update(doc_prefix + name for name in notices)
+    expected.update((license_path, 'usr/bin/spot..fly..light', 'usr/bin/spot-fly-light'))
     if set(files) != expected:
         raise ValueError('Unexpected file in bootstrap binary payload')
     for name, source in SOURCES.items():
@@ -133,10 +146,10 @@ def check_binary(files, catalog):
             alternatives.add(reviewed.replace(b'#!/bin/bash\n', b'#!/usr/bin/bash\n', 1))
         if files[target] not in alternatives:
             raise ValueError('Binary helper differs from the reviewed checkout: ' + name)
-    for name in ('COPYRIGHT', 'DISCLAIMER.txt', 'eula.txt'):
-        if files['usr/share/doc/spot-fly-light/' + name] != SOURCES[name].read_bytes():
+    for name in notices:
+        if files[doc_prefix + name] != SOURCES[name].read_bytes():
             raise ValueError('Mismatched packaged notice')
-    if files['usr/share/licenses/spot-fly-light/MIT-new-contributions.txt'] != SOURCES['MIT-new-contributions.txt'].read_bytes():
+    if files[license_path] != SOURCES['MIT-new-contributions.txt'].read_bytes():
         raise ValueError('Mismatched packaged license')
     if json.loads(files[prefix + 'source.json']) != catalog:
         raise ValueError('Binary and source catalogs differ')

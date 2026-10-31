@@ -12,11 +12,16 @@ This project is not affiliated with, approved by or supported by Spotify. COPR
 hosting does not make it an official Fedora or Red Hat package. The choice of a
 new project name is not a claim of completed trademark clearance.
 
-The next installer update adds an English-only notice, verified migration,
+Installer `spot-fly-light-26.10.31-1` adds an English-only notice, verified migration,
 progress/timing output, private source caching, date-based installer versioning
 and a desktop channel chooser. It also enables GitHub Releases containing only
-free installer assets. These source changes await
-verified publication; the completed delivery below is historical evidence.
+free installer assets. It was delivered through
+[COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+on all 17 targets and [GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1).
+Its two-channel catalog pins stable `1.2.95.453.g0eeebbed` revision 9 and testing
+`1.3.4.258.gc60b10b0946a` revision 3. Earlier deliveries below remain historical
+evidence. The newer workflow-only manual version selector was added without
+tests or dispatch, as explicitly requested by the owner.
 
 The Spot..Light bootstrap `spot-fly-light-1.2.95.453.g0eeebbed-8` was delivered
 on 31 October 2026 through [COPR build 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/),

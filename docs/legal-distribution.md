@@ -27,7 +27,20 @@ cleanup remains historical evidence. The current policy permits releases of
 only this project's free installer RPM/SRPM and checksums; it does not permit
 Spotify client redistribution. Live cleanup/build evidence belongs in
 [validation.md](validation.md), not in a blanket claim that a policy file
-proves external-state cleanup. The revised release workflow awaits verification.
+proves external-state cleanup.
+
+Installer `26.10.31-1` is now published in
+[GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1)
+with exactly three assets: the payload-free installer SRPM, x86_64 RPM and
+`SHA256SUMS`. [COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+succeeded on all 17 selected targets. The normal malware scans in
+[Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674)
+were clean; PUA findings remained separate advisory reports. That run stopped at
+the GitHub payload gate because Ubuntu used versioned documentation/license
+paths. Publication was completed manually from the verified COPR SRPM and a
+payload-free binary rebuilt from that same SRPM. The gate now accepts the
+controlled plain or versioned paths; the complete workflow has not been rerun
+after that correction. These delivery facts do not expand the license scope.
 
 Preserving bytes, scanning, attribution, a timestamp and consent do not create
 rights to redistribute Spotify. Hosting on COPR does not shift the maintainer's

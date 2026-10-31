@@ -68,8 +68,19 @@ create permission to publicly redistribute them. The current delivery policy
 allows GitHub Releases only for this project's verified free installer
 RPM/SRPM and checksums; proprietary client RPMs and DEBs remain excluded.
 A source tag can reserve a packaging number without containing a download;
-a verified installer release may later be attached to that tag. The revised
-release workflow awaits remote verification.
+a verified installer release may be attached to that tag.
+
+Operational update, 31 October 2026: installer `26.10.31-1` was delivered to all
+17 targets in [COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+and published in [GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1)
+with only its SRPM, x86_64 RPM and `SHA256SUMS`. Both normal malware scans in
+[Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674)
+were clean, with separate advisory PUA findings. The run later failed at the
+GitHub payload gate on Ubuntu's versioned documentation/license paths.
+Authorized manual publication used the verified COPR SRPM and a payload-free
+binary rebuilt from that same SRPM. The gate was corrected for controlled
+plain/versioned paths, but a complete automatic rerun has not been performed.
+This is delivery evidence, not additional Spotify permission or legal clearance.
 
 The local-build architecture removes the previous public-client delivery path.
 It is not a claim that every local repackaging/use is expressly approved by

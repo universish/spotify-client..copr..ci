@@ -120,7 +120,22 @@ def parse_packages(text: str):
     return packages
 
 
-def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=True):
+class RequestedVersionNotFound(RuntimeError):
+    """The requested version has no usable record in this official channel."""
+
+
+class AmbiguousVersionError(ValueError):
+    """A short version identifies more than one officially indexed source."""
+
+
+def matches_requested_version(version, requested):
+    if version == requested:
+        return True
+    return bool(re.fullmatch(r'[0-9]+(?:[.][0-9]+){3}', requested)
+                and re.fullmatch(re.escape(requested) + r'[.]g[0-9a-fA-F]+', version))
+
+
+def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=True, requested_version=None):
     if branch not in CHANNELS:
         raise ValueError("channel must be stable or unstable (testing)")
     distribution = CHANNELS[branch]
@@ -131,7 +146,15 @@ def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=
         try:
             with request.urlopen(url, timeout=30) as response:
                 records = parse_packages(response.read().decode("utf-8"))
-            record = next((r for r in records if r.get("Package") == package and r.get("Architecture") == "amd64"), None)
+            candidates = [r for r in records if r.get("Package") == package and r.get("Architecture") == "amd64"]
+            if requested_version is not None:
+                candidates = [r for r in candidates if matches_requested_version(r.get('Version', '').split(':', 1)[-1], requested_version)]
+                unique = {(r.get('Version'), r.get('SHA256'), r.get('Filename'), r.get('Size')): r for r in candidates}
+                if len(unique) > 1:
+                    versions = ', '.join(sorted({r['Version'] for r in unique.values()}))
+                    raise AmbiguousVersionError('Requested version matches multiple sources or conflicting metadata in ' + channel + '; use an unambiguous full version and official source record: ' + versions)
+                candidates = list(unique.values())
+            record = next(iter(candidates), None)
             if record is None or record.get("Architecture") != "amd64":
                 raise ValueError("No matching amd64 package record")
             version = record["Version"].split(":", 1)[-1]
@@ -151,6 +174,8 @@ def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=
         except error.HTTPError as exc:
             print(f"Package index unavailable (HTTP {exc.code}): {url}", file=sys.stderr)
             exc.close()
+        except AmbiguousVersionError:
+            raise
         except (error.URLError, TimeoutError, ValueError, UnicodeError, OSError, HTTPException):
             print(f"Package index unavailable or invalid: {url}", file=sys.stderr)
     # Always last; a newer LPF bootstrap is useful evidence but not sufficient
@@ -159,6 +184,8 @@ def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=
     if selected is not None:
         selected["RPMFusionChecks"] = observations
         return selected
+    if requested_version is not None:
+        raise RequestedVersionNotFound('Requested Spotify version is not advertised in accessible official ' + channel + ' indexes: ' + requested_version)
     raise RuntimeError("No official Spotify package index is usable; RPM Fusion candidates cannot establish the DEB channel/checksum; stopping")
 
 

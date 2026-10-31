@@ -275,3 +275,77 @@ RPM digest checks and excluded private bundled ELF library provides.
 These private verification RPMs remain only in ignored local output. They were
 not uploaded to GitHub, Actions artifacts or COPR. This packaging verification
 does not claim an end-user installation or graphics runtime test on every GPU.
+
+## 31 October 2026: dated installer and guided live setup
+
+Installer `spot-fly-light-26.10.31-1` was delivered by
+[COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+on all **17** selected enabled targets. Its Version is the Stockholm packaging
+calendar date; its catalog separately pins stable `1.2.95.453.g0eeebbed` client
+revision 9 and testing `1.3.4.258.gc60b10b0946a` client revision 3. Source commit
+`be2dff90014cc6385c70d1b9d8b66e6418f4bcf8` contains the delivered helper bytes.
+
+[Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674)
+completed source discovery, regression tests, both VM scans, bootstrap builds,
+COPR submission and cleanup. Each mandatory ClamAV 1.5.4 scan reported zero
+infected files. The separate PUA passes reported the known JavaScript XOR
+signature as advisory. The first download address failed for testing and the
+second official address supplied the exact pinned DEB successfully.
+
+The run's **GitHub upload step failed**: Ubuntu's RPM macros append the Version
+to documentation/license directories, whereas Fedora's macros use the package
+name alone. The gate was corrected to permit only these exact two layouts,
+retaining the 16-file allowlist and all byte checks. Nine focused gate tests
+passed. The original runner's RPMs were deleted by its cleanup step; its report
+artifact contains twelve reports/catalog files, with no RPM, DEB or application
+payload. Artifact ID `13033523903`, 7,922 bytes, ZIP SHA256:
+`7e34c15970cb62754f4e2888ef7e3528b5c2214090ea88324f03ef7ec243afd5`.
+
+Publication was completed separately at the previously authorized
+[GitHub Release](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1)
+without starting another workflow. The release has exactly three uploaded
+assets: the unchanged COPR source RPM, a neutral helper RPM rebuilt from that
+source and `SHA256SUMS`. Their public download bytes match GitHub's asset
+checksums. The corrected automatic publishing path has not been rerun.
+
+| Public asset | Bytes | SHA256 |
+| --- | ---: | --- |
+| spot-fly-light-26.10.31-1.src.rpm | 35913 | e54b5bf94e69f7d000673e2f46bede690d49aeea9378124a2017744391a96ea7 |
+| spot-fly-light-26.10.31-1.x86_64.rpm | 34263 | 8ce483037fc590e469d95cdc17c84ebdb5a313174edf4dcc566f01ccbcb71e18 |
+| SHA256SUMS | 203 | 17356d2838aff4db53caffa28e2bfc95058d1e5999d76954ebe2f55d5252cdd6 |
+
+The actual COPR Fedora 44 RPM is `spot-fly-light-26.10.31-1.fc44.x86_64.rpm`,
+31,756 bytes, SHA256
+`1ea6fdd8b49974a6eb73cca81bc9e0e9e085d4e04f5a025dc0f8b427b1567b71`.
+Its repository checksum, RPM signatures and digests verified with the already
+trusted COPR key; no key was imported. The source archive contains ten allowed
+free helper/notice/catalog files, and the binary contains sixteen allowed files.
+Both match the reviewed helper bytes. There is no Spotify payload or ClamAV
+requirement. The packaged descriptions list both upstream versions. Delivered
+`--help`/`-h` and `--client-versions`/`-cl.ver` aliases produced matching output;
+the two command wrappers have identical contents.
+
+Developer-only stable packaging exercised live byte/hash progress, all seven
+stage messages, elapsed-time heartbeats and streamed RPM output against the
+verified original DEB. All 114 vendor files passed RPM `%check`. No client was
+installed or launched, no consent record was created and no antivirus ran
+locally. In a copied RPM database, DNF `--assumeno` resolved replacement of
+this project's old `spotify-client-local-4` by the new local target revision 9,
+without unrelated removals or a host transaction. The user's earlier manual
+installation of revision 8 remains a separate user action.
+
+Before the final manual-version addition, 157 regression tests passed, including
+Stockholm DST/date-boundary cases, separate helper/client counters, preserving
+scan evidence through date finalization, GUI cancel/headless handling, safe
+terminal arguments, progress, caching and migration. The actual free RPM build,
+offline SRPM route, desktop-file validation and user-service validation passed.
+No host GUI or installation was triggered during developer verification.
+
+The final workflow-only `spotify_version`/`spotify_channel` selector was reviewed
+statically and documented. At the owner's explicit request it was **not tested,
+imported, executed or dispatched**. Its commit uses `[skip ci]` to avoid a push
+validation run. Full versions and four-part numeric versions are resolved only
+through unambiguous official index records; the canonical upstream version
+feeds the existing independent client revision counters. Historical versions
+without official index metadata are rejected before reservation or download.
+Frozen license/time-stamp evidence was left unchanged and verified separately.

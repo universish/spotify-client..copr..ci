@@ -7,6 +7,23 @@ GitHub manages daylight saving and may delay scheduled runs; this is not a
 real-time delivery guarantee. Manual dispatch can repackage unchanged versions.
 Code pushes run validation rather than publishing a package.
 
+Manual dispatch accepts an optional `spotify_version`: either the complete
+upstream value, such as `1.2.95.453.g0eeebbed`, or its four numeric components,
+such as `1.2.95.453`. The short form matches only that exact numeric value or
+its `.g<commit>` suffix; it does not match a longer neighboring version number.
+`spotify_channel` defaults to `auto`; select `stable` or `unstable` explicitly
+when the version occurs in more than one channel. A blank version keeps the
+normal current stable/testing selection.
+
+The requested source must have an unambiguous amd64 record, filename, size and
+SHA256 in an accessible official channel index. Unavailable historical versions
+and ambiguous records stop before a tag is reserved or a DEB is downloaded.
+The other channel remains current in the two-channel helper catalog. The
+canonical full upstream version determines its client packaging counter;
+the helper keeps its separate Stockholm date and same-day Release counter.
+The manual version selector was added without execution or tests at the owner's
+explicit request. It has not been dispatched.
+
 The configured network source order is:
 
 1. `https://download.spotify.com/debian` — official metadata and DEB source.
@@ -103,7 +120,21 @@ and `SHA256SUMS`. The Spotify DEB, extracted application and private local
 client RPM must never be uploaded as release assets. Source/license metadata,
 scan logs and attestation evidence can be retained as workflow artifacts;
 application payloads, RPM archives and extracted trees are excluded from
-those report artifacts. The revised release workflow awaits remote verification.
+those report artifacts.
+
+For `26.10.31-1`, [Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674)
+completed the two normal malware scans without detections and retained PUA-only
+findings as advisory reports. [COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
+succeeded on all 17 selected targets. The subsequent GitHub payload gate rejected
+Ubuntu's versioned `%doc`/`%license` paths, so the Actions run as a whole failed.
+The corrected gate accepts only the controlled plain or versioned paths.
+Authorized manual publication then used the exact verified COPR SRPM and an
+x86_64 helper RPM rebuilt from that SRPM. The live
+[GitHub Release](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1)
+contains exactly that SRPM, RPM and `SHA256SUMS`. No complete workflow rerun was
+performed after the gate correction; the manual version-selection addition
+above has not been executed or tested. See [validation.md](validation.md) for
+the separate source, scan, payload and publication evidence.
 
 An always-run cleanup removes temporary DEBs, unpacked application files, RPMs
 and private COPR configuration on success or failure. GitHub manages teardown

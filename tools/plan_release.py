@@ -13,7 +13,7 @@ from urllib import error, parse, request
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from parser_debian_control_file import fetch_package
+from parser_debian_control_file import fetch_package, RequestedVersionNotFound
 
 REPOSITORY = 'universish/spotify-client..copr..ci'
 PROJECT_QUERY = parse.urlencode({'ownername': 'universish', 'projectname': 'Spotify..Client'})
@@ -92,6 +92,35 @@ def source_signature(channels):
     pinned = {channel: {field: str(channels[channel].get(field, '')) for field in fields}
               for channel in ('stable', 'unstable')}
     return hashlib.sha256(json.dumps(pinned, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def selected_channels(requested='', requested_channel='auto'):
+    """Resolve a human-entered version using official records before reserving anything."""
+    requested = requested.strip()
+    if requested_channel not in ('auto', 'stable', 'unstable'):
+        raise ValueError('Manual Spotify channel must be auto, stable or unstable')
+    if requested and not re.fullmatch(r'[0-9]+(?:[.][0-9]+){3}(?:[.]g[0-9a-fA-F]+)?', requested):
+        raise ValueError('Enter a full Spotify version or its four-part numeric form, for example 1.2.95.453.g0eeebbed or 1.2.95.453')
+    channels = {channel: fetch_package(channel) for channel in ('stable', 'unstable')}
+    if not requested:
+        return channels
+    matches = {}
+    for channel in (('stable', 'unstable') if requested_channel == 'auto' else (requested_channel,)):
+        try:
+            matches[channel] = fetch_package(channel, requested_version=requested, audit_rpmfusion=False)
+        except RequestedVersionNotFound:
+            continue
+    if not matches:
+        raise ValueError('Requested Spotify version is unavailable in the official indexes; no package or tag was created. Historical pool filenames and mirror checksums are not guessed.')
+    if len(matches) != 1:
+        choices = ', '.join(channel + ': ' + record['RPMVersion'] for channel, record in matches.items())
+        raise ValueError('Version matches multiple channels; select spotify_channel explicitly: ' + choices)
+    channel, record = next(iter(matches.items()))
+    # The other channel remains available in this two-channel helper catalog.
+    record['RPMFusionChecks'] = channels[channel].get('RPMFusionChecks', [])
+    channels[channel] = record
+    print('Manual source resolved: ' + requested + ' -> ' + channel + ' ' + record['RPMVersion'], file=sys.stderr)
+    return channels
 
 
 def reservation_identity(ref):
@@ -256,7 +285,10 @@ def main():
         version = result['version']
         report(result, channels, version)
         return
-    channels = {channel: fetch_package(channel) for channel in ('stable', 'unstable')}
+    requested = os.environ.get('SPOT_FLY_LIGHT_REQUESTED_VERSION', '').strip()
+    if args.event != 'workflow_dispatch' and requested:
+        raise ValueError('An explicit Spotify version is supported only for manual workflow dispatch')
+    channels = selected_channels(requested, os.environ.get('SPOT_FLY_LIGHT_REQUESTED_CHANNEL', 'auto') or 'auto')
     bootstrap = packaging_identity()
     version = bootstrap['Version']
     signature = source_signature(channels)

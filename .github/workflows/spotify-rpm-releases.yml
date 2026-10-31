@@ -5,6 +5,21 @@ on:
     - cron: '0 12,17 * * *'
       timezone: Europe/Stockholm
   workflow_dispatch:
+    inputs:
+      spotify_version:
+        description: 'Optional Spotify version: full code or four numeric parts; blank uses current channels'
+        required: false
+        type: string
+        default: ''
+      spotify_channel:
+        description: 'Channel for the requested version; auto infers it from official indexes'
+        required: false
+        type: choice
+        default: auto
+        options:
+          - auto
+          - stable
+          - unstable
 
 permissions:
   contents: read
@@ -30,6 +45,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
           SPOT_FLY_LIGHT_METADATA_DIR: ${{ runner.temp }}/spot..fly..light-metadata
+          SPOT_FLY_LIGHT_REQUESTED_VERSION: ${{ inputs.spotify_version }}
+          SPOT_FLY_LIGHT_REQUESTED_CHANNEL: ${{ inputs.spotify_channel }}
         run: python3 tools/plan_release.py --event "$GITHUB_EVENT_NAME"
       - name: Install packaging, scanning and COPR tools
         if: steps.version.outputs.needed == 'true'
@@ -65,7 +82,7 @@ jobs:
           python3 tools/build_bootstrap.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output
           src/build_binary.sh output/spot-fly-light-*.src.rpm output
           test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/spot-fly-light-*.x86_64.rpm)" = "spot-fly-light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE x86_64"
-          sha256sum output/spot-fly-light-*.rpm > output/SHA256SUMS
+          (cd output && sha256sum spot-fly-light-*.rpm > SHA256SUMS)
       - name: Submit source RPM to enabled COPR targets and wait
         if: steps.version.outputs.needed == 'true'
         env:
