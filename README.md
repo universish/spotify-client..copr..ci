@@ -4,9 +4,11 @@ Proje adı **Spot..Light**, RPM paketi **`spot-fly-light`**, terminal komutu
 **`spot..fly..light`**. RPM paket adlarında `..` kullanılamadığı için paket adı
 tirelerle yazılır; terminal komutu seçtiğiniz biçimi korur.
 
-> Spot..Light ad değişikliğinin kaynak kodu hazırlanıyor; yeni COPR yayını henüz
-> doğrulanmadı. Önceki Sonicradle `1.2.95.453.g0eeebbed-6` yayını, COPR derlemesi
-> `11231606` ile doğrulanmış tarihsel kayıttır. Eski paketler `spot..fly..light` komutunu içermez.
+> **31 Ekim 2026:** `spot-fly-light-1.2.95.453.g0eeebbed-8` kurucusu
+> [COPR derlemesi 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/)
+> ile 17 hedefin tamamında başarıyla üretildi. [Actions çalışması 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
+> CI tarama ve yayın kaydıdır. Kurucu stable ve testing kaynak bilgilerini içerir;
+> önceki Sonicradle paketleri yeni `spot..fly..light` komutunu içermez.
 
 **İndirmeden ve kurmadan önce okuyun:** COPR RPM'si küçük bir topluluk
 kurucusudur. Spotify uygulamasını, logosunu veya özel mülk ikililerini içermez.
@@ -124,9 +126,11 @@ The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
 and its terminal command is **`spot..fly..light`**. RPM package names cannot
 contain `..`, so the package uses hyphens while the command keeps the chosen spelling.
 
-> The Spot..Light rename is being prepared in source; its new COPR publication has
-> not yet been verified. Sonicradle `1.2.95.453.g0eeebbed-6`, delivered by COPR
-> build `11231606`, is historical evidence. Older packages do not contain `spot..fly..light`.
+> **31 October 2026:** Bootstrap `spot-fly-light-1.2.95.453.g0eeebbed-8`
+> built successfully for all 17 targets in [COPR build 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/).
+> [Actions run 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
+> records the CI scans and delivery. The bootstrap contains both stable and
+> testing source records; older Sonicradle packages do not contain `spot..fly..light`.
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.

@@ -12,12 +12,21 @@ This project is not affiliated with, approved by or supported by Spotify. COPR
 hosting does not make it an official Fedora or Red Hat package. The choice of a
 new project name is not a claim of completed trademark clearance.
 
-The Spot..Light rename is implemented in source and awaits verified COPR delivery.
+The Spot..Light bootstrap `spot-fly-light-1.2.95.453.g0eeebbed-8` was delivered
+on 31 October 2026 through [COPR build 11233588](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11233588/),
+with all 17 targets successful. [Actions run 41151337784](https://github.com/universish/spotify-client..copr..ci/actions/runs/41151337784)
+used [source commit 1c2f582](https://github.com/universish/spotify-client..copr..ci/commit/1c2f582ce63ebd17a4f6ef6e7abf525a84b2b2fd).
+Its 112 tests passed; both official DEBs passed the normal malware scan, with
+PUA-only findings reported separately. The Fedora 44 bootstrap RPM's signature
+and digests were verified against the trusted COPR key. Its catalog selects
+stable `1.2.95.453.g0eeebbed-8` or testing `1.3.4.258.gc60b10b0946a-2` for private
+local packaging; neither client payload is included in the public bootstrap.
+
 The preceding Sonicradle bootstrap was delivered by COPR build 11231606 and
 verified against its Actions provenance. Those package/scan records remain
 historical evidence; neither that package nor the earlier `spotify` RPM
-contains the new `spot..fly..light` command. The validation record keeps the original
-artifact names and hashes unchanged.
+contains the new `spot..fly..light` command. The validation record keeps the
+original artifact names and hashes unchanged.
 
 ## Why this fork changed
 
