@@ -36,6 +36,31 @@ def build(identity, state='succeeded'):
 
 
 class ArchivePlanningTests(unittest.TestCase):
+    def test_explicit_archive_pair_uses_fresh_signed_proof_for_exact_current_bytes(self):
+        sources = channels()
+        signed = {channel: dict(record, Authentication={'proof': channel}) for channel, record in sources.items()}
+        def fetch(channel, **kwargs): return copy.deepcopy(signed[channel])
+        for requested in ('1.2.63.394', '1:1.2.63.394.g126b0d89'):
+            with self.subTest(requested=requested), mock.patch.object(planner, 'fetch_package', side_effect=fetch), \
+                    mock.patch('spotify_history.select_historical_channels', return_value=(copy.deepcopy(sources), {'Selection': 'manual'})), \
+                    mock.patch('parser_debian_control_file.verify_historical_record') as archived:
+                result, pairing = planner.select_sources(requested, 'stable', '1.2.86.502')
+            self.assertEqual(pairing['Kind'], 'archive')
+            self.assertEqual(result['stable']['Authentication'], {'proof': 'stable'})
+            self.assertEqual(result['unstable']['Authentication'], {'proof': 'unstable'})
+            archived.assert_not_called()
+
+    def test_changed_historical_hash_cannot_borrow_current_authentication(self):
+        sources = channels(); historical = copy.deepcopy(sources)
+        historical['stable']['SHA256'] = 'c' * 64
+        def fetch(channel, **kwargs): return copy.deepcopy(sources[channel])
+        with mock.patch.object(planner, 'fetch_package', side_effect=fetch), \
+                mock.patch('spotify_history.select_historical_channels', return_value=(historical, {'Selection': 'manual'})), \
+                mock.patch('parser_debian_control_file.verify_historical_record', side_effect=ValueError('No signed historical proof')) as archived:
+            with self.assertRaisesRegex(ValueError, 'No signed historical proof'):
+                planner.select_sources('1.2.63.394', 'stable', '1.2.86.502')
+        archived.assert_called_once_with(historical['stable'])
+
     def test_old_pair_uses_version_zero_and_counts_failed_reservations(self):
         sources = channels()
         first = planner.archive_identity(sources, {'Selection': 'manual'}, [], [])

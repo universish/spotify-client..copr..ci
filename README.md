@@ -1,21 +1,21 @@
 # Spot..Light Local RPM Installer — universish
 
-> **31 October 2026:** Installer `spot-fly-light-26.10.31-1` is available in
-> [COPR build 11234424](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11234424/)
-> (17 successful targets) and [GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.10.31-1).
-> It adds date-based versioning, desktop channel selection, English notices,
-> verified migration, private source caching and detailed live progress.
+> **1 November 2026 (Stockholm):** Installer `spot-fly-light-26.11.01-1` is available in
+> [COPR build 11241791](https://copr.fedorainfracloud.org/coprs/universish/Spotify..Client/build/11241791/)
+> (17 successful targets) and [GitHub Releases](https://github.com/universish/spotify-client..copr..ci/releases/tag/spot-fly-light-v26.11.01-1).
+> It adds signed repository authentication, isolated Fontconfig caches, the
+> `spotify` launcher in the local client, and English command documentation.
 
 The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
 and its terminal command is **`spot..fly..light`**. **`spot-fly-light`** is an
 equivalent command alias. The RPM package uses hyphens while the primary command keeps the chosen spelling.
 
-The installed catalog offers stable `1.2.95.453.g0eeebbed` (client revision 9)
-and unstable `1.3.4.258.gc60b10b0946a` (client revision 3). Both original DEBs
-passed mandatory malware scans in [Actions run 41178035674](https://github.com/universish/spotify-client..copr..ci/actions/runs/41178035674).
-That run's initial GitHub upload gate stopped on Ubuntu documentation paths;
-the gate was corrected and the verified helper assets were published separately.
-See [validation evidence](docs/validation.md) for delivery details and history.
+This release's catalog offers stable `1.2.95.453.g0eeebbed` (client revision 10)
+and unstable `1.3.4.258.gc60b10b0946a` (client revision 4). Both original DEBs
+passed mandatory malware scans in [Actions run 41357809613](https://github.com/universish/spotify-client..copr..ci/actions/runs/41357809613).
+PUA findings are reported separately. The exact Ubuntu and Fedora helper payloads
+were independently checked after delivery. See [current validation evidence](docs/validation-2026-11-02.md)
+and [earlier delivery history](docs/validation.md).
 
 **Please read before downloading and installing:** The COPR RPM is a small community-maintained
 installer. It does not include the Spotify app, logo, or proprietary binaries.

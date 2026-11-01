@@ -135,7 +135,18 @@ def select_sources(requested='', requested_channel='auto', opposite_version='', 
     from spotify_history import select_historical_channels
     import parser_debian_control_file as upstream
     historical, pairing = select_historical_channels(requested, requested_channel, opposite_version)
-    historical = {channel: upstream.verify_historical_record(record) for channel, record in historical.items()}
+    authenticated = {}
+    for channel, record in historical.items():
+        current = channels.get(channel)
+        if current and all(str(current.get(field, '')) == str(record.get(field, ''))
+                           for field in ('RPMVersion', 'Version', 'SHA256', 'Size', 'Filename')):
+            # A historical observation is a discovery hint. When the exact
+            # bytes still appear in today's signed channel, retain that fresh
+            # authentication instead of requiring a separate archive signature.
+            authenticated[channel] = dict(record, **current)
+        else:
+            authenticated[channel] = upstream.verify_historical_record(record)
+    historical = authenticated
     return historical, dict(pairing, Kind='archive')
 
 
