@@ -20,6 +20,11 @@ on:
           - auto
           - stable
           - unstable
+      opposite_version:
+        description: 'Optional opposite-channel version for an explicitly reviewed historical pair'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -47,18 +52,19 @@ jobs:
           SPOT_FLY_LIGHT_METADATA_DIR: ${{ runner.temp }}/spot..fly..light-metadata
           SPOT_FLY_LIGHT_REQUESTED_VERSION: ${{ inputs.spotify_version }}
           SPOT_FLY_LIGHT_REQUESTED_CHANNEL: ${{ inputs.spotify_channel }}
+          SPOT_FLY_LIGHT_OPPOSITE_VERSION: ${{ inputs.opposite_version }}
         run: python3 tools/plan_release.py --event "$GITHUB_EVENT_NAME"
       - name: Install packaging, scanning and COPR tools
         if: steps.version.outputs.needed == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm rpm2cpio cpio dpkg-dev clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils
+          sudo apt-get install -y rpm rpm2cpio cpio dpkg-dev gnupg clamav clamav-freshclam python3 python3-venv binutils desktop-file-utils fontconfig fonts-noto-cjk pango1.0-tools
           python3 -m venv "$RUNNER_TEMP/spot..fly..light-copr-venv"
           "$RUNNER_TEMP/spot..fly..light-copr-venv/bin/pip" install copr-cli
           echo "$RUNNER_TEMP/spot..fly..light-copr-venv/bin" >> "$GITHUB_PATH"
       - name: Run regression tests
         if: steps.version.outputs.needed == 'true'
-        run: python3 -m unittest discover -s tests -v
+        run: env -u GITHUB_STEP_SUMMARY -u GITHUB_OUTPUT python3 -m unittest discover -s tests -v
       - name: Download, verify, extract and scan upstream DEBs in this runner
         if: steps.version.outputs.needed == 'true'
         # Ubuntu's freshclam AppArmor profile permits owner /tmp/**; the
@@ -76,31 +82,51 @@ jobs:
       - name: Build payload-free bootstrap RPMs
         if: steps.version.outputs.needed == 'true'
         env:
+          SPOT_FLY_LIGHT_NAME: ${{ steps.packaging.outputs.name }}
           SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
           SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
         run: |
           python3 tools/build_bootstrap.py "$RUNNER_TEMP/spot..fly..light-metadata/source.json" output
-          src/build_binary.sh output/spot-fly-light-*.src.rpm output
-          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' output/spot-fly-light-*.x86_64.rpm)" = "spot-fly-light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE x86_64"
-          (cd output && sha256sum spot-fly-light-*.rpm > SHA256SUMS)
+          src/build_binary.sh "output/$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.src.rpm" output
+          test "$(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}' "output/$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.x86_64.rpm")" = "$SPOT_FLY_LIGHT_NAME $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE x86_64"
+          (cd output && sha256sum "$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.src.rpm" "$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.x86_64.rpm" > SHA256SUMS)
+      - name: Verify all public assets before either publication service
+        if: steps.version.outputs.needed == 'true'
+        env:
+          SPOT_FLY_LIGHT_NAME: ${{ steps.packaging.outputs.name }}
+          SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
+          SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
+        run: python3 tools/verify_release_payload.py output --name "$SPOT_FLY_LIGHT_NAME" --version "$SPOT_FLY_LIGHT_VERSION" --release "$SPOT_FLY_LIGHT_RELEASE" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       - name: Submit source RPM to enabled COPR targets and wait
         if: steps.version.outputs.needed == 'true'
         env:
           COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+          SPOT_FLY_LIGHT_NAME: ${{ steps.packaging.outputs.name }}
           SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
           SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
-        run: bash tools/submit_copr.sh output/spot-fly-light-*.src.rpm output
+        run: bash tools/submit_copr.sh "output/$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.src.rpm" output
       - name: Verify and publish only the payload-free bootstrap to GitHub Releases
         if: steps.version.outputs.needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPOT_FLY_LIGHT_NAME: ${{ steps.packaging.outputs.name }}
+          SPOT_FLY_LIGHT_KIND: ${{ steps.packaging.outputs.kind }}
           SPOT_FLY_LIGHT_VERSION: ${{ steps.packaging.outputs.version }}
           SPOT_FLY_LIGHT_RELEASE: ${{ steps.packaging.outputs.release }}
           SPOT_FLY_LIGHT_TAG: ${{ steps.packaging.outputs.tag }}
         run: |
-          python3 tools/verify_release_payload.py output --version "$SPOT_FLY_LIGHT_VERSION" --release "$SPOT_FLY_LIGHT_RELEASE" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          gh release create "$SPOT_FLY_LIGHT_TAG" --verify-tag --draft --title "Spot..Light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" --notes-file output/release-notes.md output/spot-fly-light-*.src.rpm output/spot-fly-light-*.x86_64.rpm output/SHA256SUMS
-          gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --latest
+          python3 tools/verify_release_payload.py output --name "$SPOT_FLY_LIGHT_NAME" --version "$SPOT_FLY_LIGHT_VERSION" --release "$SPOT_FLY_LIGHT_RELEASE" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          case "$SPOT_FLY_LIGHT_KIND" in
+            current) title="Spot..Light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE"; flags=() ;;
+            archive) title="ARCHIVE $SPOT_FLY_LIGHT_NAME ($SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE)"; flags=(--prerelease) ;;
+            *) echo 'Unknown publication kind' >&2; exit 2 ;;
+          esac
+          gh release create "$SPOT_FLY_LIGHT_TAG" --verify-tag --draft "${flags[@]}" --title "$title" --notes-file output/release-notes.md "output/$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.src.rpm" "output/$SPOT_FLY_LIGHT_NAME-$SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE.x86_64.rpm" output/SHA256SUMS
+          if [ "$SPOT_FLY_LIGHT_KIND" = archive ]; then
+            gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --prerelease --latest=false
+          else
+            gh release edit "$SPOT_FLY_LIGHT_TAG" --draft=false --latest
+          fi
       - name: Remove transient RPMs, source downloads and build environments
         if: always()
         shell: bash

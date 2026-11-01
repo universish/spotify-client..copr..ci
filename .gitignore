@@ -1,5 +1,7 @@
 __pycache__
-data/
+data/*
+!data/spotify-history.json
+!data/spotify-history.csv
 logs/
 gpg-key/
 .env

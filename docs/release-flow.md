@@ -16,13 +16,13 @@ when the version occurs in more than one channel. A blank version keeps the
 normal current stable/testing selection.
 
 The requested source must have an unambiguous amd64 record, filename, size and
-SHA256 in an accessible official channel index. Unavailable historical versions
-and ambiguous records stop before a tag is reserved or a DEB is downloaded.
-The other channel remains current in the two-channel helper catalog. The
-canonical full upstream version determines its client packaging counter;
-the helper keeps its separate Stockholm date and same-day Release counter.
-The manual version selector was added without execution or tests at the owner's
-explicit request. It has not been dispatched.
+SHA256 authenticated through signed repository metadata. Current selection uses
+both current Spotify channels. Historical selection uses the checked-in evidence
+catalog and a reviewed observed counterpart; otherwise `opposite_version` must
+be explicit and the pair is labelled manual. Discovery observations never become
+publisher release dates. Unsupported, ambiguous or unauthenticated sources stop
+before reservation or DEB download. Full Debian epochs/revisions determine the
+source identity and independent client packaging counters.
 
 The configured network source order is:
 
@@ -32,12 +32,16 @@ The configured network source order is:
 4. `https://deb.rug.nl/ppa/mirror/repository.spotify.com` — an unofficial,
    byte-download fallback only, for the already pinned official filename.
 
-Only the three official indexes determine channel, version, filename, size and
-SHA256. Source discovery fails if all three official indexes are unavailable;
+Only the three Spotify indexes determine the normal current channels. Their
+OpenPGP signatures bind the exact Packages size/hash and each selected DEB.
+Current source discovery fails if all three official indexes are unavailable;
 it does not trust a mirror's index or select an arbitrary mirror version. A
 DEB fetched from the unofficial fallback must match the exact official size
 and SHA256 before use. A valid private cache is checked first and avoids a
-network download. RPM Fusion references remain the final advisory check and
+network download. Historical downloads can also use reviewed Mint/Linux Lite
+transports or exact Spotify backup aliases from the [source registry](source-registry.md).
+Signed distribution metadata is labelled distribution-authenticated, and cannot
+choose a current Spotify channel. RPM Fusion references remain the final advisory check and
 cannot override official channel or source identity.
 
 Stable is the default channel; the explicit `-unstable` client option selects
@@ -60,15 +64,16 @@ channels. Its RPM Version is the packaging date in `Europe/Stockholm`, formatted
 RPM description and `--client-versions` / `-cl.ver` expose both pinned client
 versions separately. The catalog records installer identity under `Bootstrap`
 and keeps stable/unstable upstream metadata distinct. The local target is named
-`spot-fly-light-client-local` for both channels. A switch replaces that single package instead of creating side-by-side stable/testing installs.
+`spotify-client-via-spot-fly-light` for both current channels. A switch replaces that single package instead of creating side-by-side stable/testing installs.
 
 After scanning, the workflow confirms Stockholm's date immediately before
 packaging. If scanning crossed midnight, it reserves a new date-based helper
 tag while preserving the scanned DEB identities and independent client counters.
 The previous reservation remains historical evidence; it is not rewritten.
 
-The planner compares the selected source signature with previously delivered
-metadata. A scheduled check with an unchanged delivered signature stops before
+The planner compares the selected source signature only with the latest
+successfully delivered current helper. Older matching signatures and archived
+helpers cannot suppress a new current delivery. A scheduled check with an unchanged delivered signature stops before
 build/scanning/COPR submission. A change to either channel requires a new
 bootstrap so testing metadata does not become stale merely because stable has
 not changed.
@@ -91,9 +96,22 @@ from the date-based installer Release: each upstream channel version starts at
 `-1` and counts delivered catalogs for subsequent repackaging. A failed
 reservation does not consume that client version's initial `-1`.
 
+## Historical identities
+
+The baseline is the pair stable1.2.95.453 / testing1.3.4.258 recorded on
+31 October 2026. Archive helper names are `spot-fly-light-st<S>-unst<U>`;
+only the public pair name omits `.g...`. Unknown/pre-helper dates use RPM Version
+`0` and a per-pair Release. A known earlier helper keeps its first date and daily
+slot, with a separate dotted rebuild counter. Real packaging time remains explicit.
+
+Archives have separate commands, source catalogs, application/state directories
+and private client RPM names. They have no Provides/Obsoletes relationship with
+the current helper and never own `/usr/bin/spotify`. GitHub archives are
+prereleases with `make_latest=false`; current DNF upgrade selection is unchanged.
+
 ## Mandatory scan in GitHub Actions
 
-The Actions VM downloads each selected official DEB, checks size and SHA256,
+The Actions VM downloads each selected authenticated DEB, checks size and SHA256,
 updates an isolated ClamAV database and raw-extracts the archive. Debian
 maintainer scripts are not executed. The original DEB, extracted application
 and control scripts are scanned with mandatory malware/heuristic signatures.

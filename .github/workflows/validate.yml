@@ -13,7 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install verification tools for real helper and font tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm rpm2cpio cpio dpkg-dev gnupg binutils desktop-file-utils fontconfig fonts-noto-cjk pango1.0-tools
       - name: Check scripts and regression tests
         run: |
           for script in src/*.sh tools/*.sh; do bash -n "$script"; done
-          python3 -m unittest discover -s tests -v
+          env -u GITHUB_STEP_SUMMARY -u GITHUB_OUTPUT python3 -m unittest discover -s tests -v

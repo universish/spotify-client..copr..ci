@@ -1,4 +1,7 @@
 import importlib.util
+import base64
+from datetime import datetime, timezone
+from email.utils import format_datetime
 import gzip
 import hashlib
 import io
@@ -11,91 +14,121 @@ spec = importlib.util.spec_from_file_location("spotify_sources", Path(__file__).
 sources = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sources)
 
-INDEX = b"Package: spotify-client\nArchitecture: amd64\nVersion: 1:1.2.3\nFilename: pool/non-free/s/spotify-client/spotify-client_1.2.3_amd64.deb\nSize: 123\nSHA256: " + b"a" * 64 + b"\n"
+INDEX = b"Package: spotify-client\nArchitecture: amd64\nVersion: 1:1.2.3.4.g123456789-1\nFilename: pool/non-free/s/spotify-client/spotify-client_1.2.3.4.g123456789-1_amd64.deb\nSize: 123\nSHA256: " + b"a" * 64 + b"\n"
+
+
+def evidence(index=INDEX, repository='spotify-download', distribution='stable'):
+    # Pure envelope fixture only. Real signatures and key policy are tested in test_source_auth.
+    info = sources.source_auth.source(repository)
+    path = info['distributions'][distribution]['index_path']
+    stamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    release = f"Suite: {distribution}\nDate: {format_datetime(stamp)}\nSHA256:\n {hashlib.sha256(index).hexdigest()} {len(index)} {path}\n".encode()
+    return {'Schema': 1, 'Type': 'spotify-openpgp', 'Publisher': info['owner'],
+            'RepositoryID': repository, 'Distribution': distribution, 'Fingerprint': info['fingerprint'],
+            'ReleaseDate': stamp.isoformat(), 'ReleaseSHA256': hashlib.sha256(release).hexdigest(),
+            'ValidUntil': None, 'IndexPath': path, 'IndexSHA256': hashlib.sha256(index).hexdigest(),
+            'IndexSize': len(index), 'Evidence': {'Packages': base64.b64encode(index).decode(),
+            'Release': base64.b64encode(release).decode(), 'Signature': base64.b64encode(b'unit fixture only').decode()}}
 
 
 class SourceTests(unittest.TestCase):
     def setUp(self):
-        self.audit = mock.patch.object(sources, "check_rpmfusion", return_value=[])
+        self.audit = mock.patch.object(sources, 'check_rpmfusion', return_value=[])
         self.audit.start()
         self.addCleanup(self.audit.stop)
 
-    def test_download_spotify_is_checked_first(self):
-        with mock.patch.object(sources.request, "urlopen", return_value=io.BytesIO(INDEX)) as fetch:
-            result = sources.fetch_package("stable")
-        self.assertTrue(fetch.call_args.args[0].startswith("https://download.spotify.com/debian/dists/"))
-        self.assertEqual(result["RepositoryURL"], "https://download.spotify.com/debian")
+    def test_download_spotify_is_checked_first_and_preserves_raw_version(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', return_value=(INDEX, evidence())) as fetch:
+            result = sources.fetch_package('stable')
+        self.assertEqual(fetch.call_args.args, ('spotify-download', 'stable'))
+        self.assertEqual(result['RepositoryURL'], 'https://download.spotify.com/debian')
+        self.assertEqual(result['Version'], '1:1.2.3.4.g123456789-1')
+        self.assertEqual(result['DebianVersion'], result['Version'])
+        self.assertEqual(result['RPMVersion'], '1.2.3.4.g123456789.deb1')
+        self.assertEqual(result['NumericVersion'], '1.2.3.4')
 
-    def test_missing_primary_index_falls_back_to_working_package_index(self):
-        failure = HTTPError("https://download.spotify.com/debian/dists/stable/", 404, "missing", {}, io.BytesIO())
-        with mock.patch.object(sources.request, "urlopen", side_effect=[failure, io.BytesIO(INDEX)]) as fetch:
-            result = sources.fetch_package("stable")
+    def test_missing_primary_source_uses_next_signed_source(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=[
+                sources.source_auth.SourceUnavailable('offline'), (INDEX, evidence(repository='spotify-repository'))]) as fetch:
+            result = sources.fetch_package()
         self.assertEqual(fetch.call_count, 2)
-        self.assertTrue(fetch.call_args.args[0].endswith("/dists/stable/non-free/binary-amd64/Packages"))
-        self.assertEqual(result["RepositoryURL"], "https://repository.spotify.com")
+        self.assertEqual(result['RepositoryURL'], 'https://repository.spotify.com')
 
     def test_origin_is_third_official_metadata_source(self):
-        with mock.patch.object(sources.request, 'urlopen', side_effect=[URLError('offline'), URLError('offline'), io.BytesIO(INDEX)]) as fetch:
-            result = sources.fetch_package('stable')
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=[
+                sources.source_auth.SourceUnavailable('offline'), sources.source_auth.SourceUnavailable('offline'),
+                (INDEX, evidence(repository='spotify-origin'))]) as fetch:
+            result = sources.fetch_package()
         self.assertEqual(fetch.call_count, 3)
-        self.assertEqual(result['RepositoryURL'], 'https://repository-origin.spotify.com')
         self.assertEqual(result['DownloadBaseURLs'][-1], 'https://deb.rug.nl/ppa/mirror/repository.spotify.com')
+        self.assertNotIn('https://ftp.sh.cvut.cz/mint', result['DownloadBaseURLs'])
 
-    def test_community_mirror_never_supplies_authoritative_metadata(self):
-        with mock.patch.object(sources.request, 'urlopen', side_effect=URLError('offline')) as fetch:
-            with self.assertRaises(RuntimeError):
-                sources.fetch_package('stable')
+    def test_community_mirror_never_supplies_metadata(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=sources.source_auth.SourceUnavailable('offline')) as fetch:
+            with self.assertRaises(RuntimeError): sources.fetch_package()
         self.assertEqual(fetch.call_count, 3)
-        self.assertTrue(all('deb.rug.nl' not in call.args[0] for call in fetch.call_args_list))
+        self.assertTrue(all(c.args[0].startswith('spotify-') for c in fetch.call_args_list))
 
-    def test_unusable_official_sources_fail_instead_of_claiming_unchanged(self):
-        with mock.patch.object(sources.request, "urlopen", side_effect=URLError("offline")):
-            with self.assertRaises(RuntimeError):
-                sources.fetch_package("stable")
+    def test_bad_signature_is_fatal_without_mirror_downgrade(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=sources.source_auth.AuthenticationError('bad signature')) as fetch:
+            with self.assertRaises(sources.source_auth.AuthenticationError): sources.fetch_package()
+        self.assertEqual(fetch.call_count, 1)
 
-    def test_unstable_uses_official_testing_index(self):
-        with mock.patch.object(sources.request, "urlopen", return_value=io.BytesIO(INDEX)) as fetch:
-            result = sources.fetch_package("unstable")
-        self.assertIn("/dists/testing/", fetch.call_args.args[0])
-        self.assertEqual(result["Channel"], "unstable")
-        self.assertEqual(result["Distribution"], "testing")
+    def test_rollback_can_try_a_newer_official_transport(self):
+        state = {'spotify-repository:stable': {'ReleaseDate': '2026-01-01T00:00:00+00:00'}}
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=[
+                sources.source_auth.MetadataRollback('old mirror'), (INDEX, evidence(repository='spotify-repository'))]) as fetch:
+            sources.fetch_package(accepted_state=state)
+        self.assertEqual(fetch.call_args.kwargs['accepted_state'], state)
 
-    def test_default_channel_is_stable(self):
-        with mock.patch.object(sources.request, "urlopen", return_value=io.BytesIO(INDEX)):
-            self.assertEqual(sources.fetch_package()["Channel"], "stable")
+    def test_unstable_uses_testing_and_default_stable(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', return_value=(INDEX, evidence(distribution='testing'))) as fetch:
+            result = sources.fetch_package('unstable')
+        self.assertEqual(fetch.call_args.args, ('spotify-download', 'testing'))
+        self.assertEqual(result['Channel'], 'unstable')
+        with mock.patch.object(sources.source_auth, 'verify_repository', return_value=(INDEX, evidence())):
+            self.assertEqual(sources.fetch_package()['Channel'], 'stable')
 
-    def test_unknown_channel_does_not_touch_network(self):
-        with mock.patch.object(sources.request, "urlopen") as fetch:
-            with self.assertRaises(ValueError):
-                sources.fetch_package("pool")
+    def test_unknown_channel_never_fetches(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository') as fetch:
+            with self.assertRaises(ValueError): sources.fetch_package('pool')
         fetch.assert_not_called()
 
-    def test_integrity_metadata_is_required_before_a_record_can_be_used(self):
-        for text in (INDEX.replace(b"Size: 123\n", b""), INDEX.replace(b"pool/non-free/s/spotify-client/", b"../../")):
-            with self.subTest(text=text):
-                with mock.patch.object(sources.request, "urlopen", side_effect=lambda *a, **k: io.BytesIO(text)):
-                    with self.assertRaises(RuntimeError):
-                        sources.fetch_package()
+    def test_missing_size_and_traversal_are_rejected(self):
+        for data in (INDEX.replace(b'Size: 123\n', b''), INDEX.replace(b'pool/non-free/s/spotify-client/', b'../../')):
+            with self.subTest(data=data), mock.patch.object(sources.source_auth, 'verify_repository', return_value=(data, evidence(data))):
+                with self.assertRaises(sources.source_auth.AuthenticationError): sources.fetch_package()
 
-    def test_rpmfusion_is_checked_after_official_discovery(self):
+    def test_short_and_full_requested_versions_match_epoch_revision(self):
+        for requested in ('1.2.3.4', '1.2.3.4.g123456789', '1:1.2.3.4.g123456789-1'):
+            self.assertTrue(sources.matches_requested_version('1:1.2.3.4.g123456789-1', requested))
+        self.assertFalse(sources.matches_requested_version('1:1.2.3.4.g123456789-1', '1.2.3.5'))
+
+    def test_ambiguous_requested_version_fails(self):
+        data = INDEX + b'\n' + INDEX.replace(b'g123456789', b'g987654321')
+        with mock.patch.object(sources.source_auth, 'verify_repository', return_value=(data, evidence(data))):
+            with self.assertRaises(sources.AmbiguousVersionError): sources.fetch_package(requested_version='1.2.3.4')
+
+    def test_rpmfusion_last_and_never_replaces_authority(self):
         events = []
         def official(*args, **kwargs):
-            events.append("official")
-            return io.BytesIO(INDEX)
+            events.append('official'); return INDEX, evidence()
         def audit():
-            events.append("rpmfusion")
-            return [{"repository": "fedora-44-updates", "packages": [{"version": "99.0"}]}]
-        with mock.patch.object(sources.request, "urlopen", side_effect=official), mock.patch.object(sources, "check_rpmfusion", side_effect=audit):
-            record = sources.fetch_package()
-        self.assertEqual(events, ["official", "rpmfusion"])
-        self.assertEqual(record["RPMVersion"], "1.2.3")
-        self.assertEqual(record["Channel"], "stable")
+            events.append('rpmfusion'); return [{'packages': [{'version': '99'}]}]
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=official), mock.patch.object(sources, 'check_rpmfusion', side_effect=audit):
+            result = sources.fetch_package()
+        self.assertEqual(events, ['official', 'rpmfusion'])
+        self.assertEqual(result['NumericVersion'], '1.2.3.4')
 
-    def test_rpmfusion_candidate_cannot_replace_missing_official_checksum(self):
-        with mock.patch.object(sources.request, "urlopen", side_effect=URLError("offline")), mock.patch.object(sources, "check_rpmfusion", return_value=[{"packages": [{"version": "99"}]}]) as audit:
-            with self.assertRaisesRegex(RuntimeError, "cannot establish the DEB channel/checksum"):
-                sources.fetch_package()
-        audit.assert_called_once()
+    def test_missing_official_sources_are_failure_not_unchanged(self):
+        with mock.patch.object(sources.source_auth, 'verify_repository', side_effect=sources.source_auth.SourceUnavailable('offline')):
+            with self.assertRaisesRegex(RuntimeError, 'cannot establish the DEB channel/checksum'): sources.fetch_package()
+
+    def test_archive_capture_cannot_change_the_registered_original(self):
+        expected = 'https://repository.spotify.com/dists/stable/InRelease'
+        self.assertEqual(sources._snapshot_url('https://web.archive.org/web/20261031000000id_/' + expected, expected), {'web.archive.org'})
+        for url in ('https://attacker.invalid/x', 'https://web.archive.org/web/20261031000000id_/https://attacker.invalid/x'):
+            with self.assertRaises(sources.source_auth.AuthenticationError): sources._snapshot_url(url, expected)
 
 
 class RPMFusionTests(unittest.TestCase):

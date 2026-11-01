@@ -17,13 +17,108 @@ import sys
 import tempfile
 import threading
 import time
-from urllib.request import urlopen
+from urllib.request import HTTPRedirectHandler, build_opener
+from urllib.parse import unquote, urlsplit
 
 HERE = Path(__file__).resolve().parent
+if str(HERE.parent / 'src') not in sys.path:
+    sys.path.append(str(HERE.parent / 'src'))
+from release_identity import current_paths, release_profile, source_version
+
+
+def helper_layout():
+    try:
+        catalog = json.loads((HERE / 'source.json').read_text())
+    except FileNotFoundError:
+        return current_paths()
+    if 'Bootstrap' not in catalog:
+        return current_paths()  # Previously delivered current helpers used this schema.
+    return release_profile(catalog)
+
+
+def client_name():
+    return helper_layout()['client_name']
+
+
+def client_share():
+    return Path(helper_layout()['client_share'])
+
+
+def helper_command():
+    return helper_layout()['command']
+
 BASES = ('https://download.spotify.com/debian', 'https://repository.spotify.com',
          'https://repository-origin.spotify.com',
          'https://deb.rug.nl/ppa/mirror/repository.spotify.com')
 CURRENT_CHANNEL = 'stable'
+
+
+def _byte_sources():
+    from source_auth import registry
+    return [source for source in registry()['sources']
+            if source.get('enabled') and 'bytes' in source.get('roles', [])]
+
+
+def approved_download_url(url):
+    """Allow only reviewed HTTPS byte transports, with exact path boundaries."""
+    from source_auth import safe_relative
+    if not isinstance(url, str) or any(ord(char) <= 32 or ord(char) == 127 for char in url):
+        raise ValueError('Unregistered DEB download URL')
+    parsed = urlsplit(url)
+    if (parsed.scheme != 'https' or parsed.username or parsed.password
+            or parsed.port not in (None, 443) or parsed.query or parsed.fragment
+            or not parsed.path.startswith('/')):
+        raise ValueError('Unregistered DEB download URL')
+    safe_relative(parsed.path[1:])
+    for source in _byte_sources():
+        base = urlsplit(source['base_url'].rstrip('/'))
+        prefix = base.path.rstrip('/') + '/'
+        if parsed.hostname == base.hostname and parsed.path.startswith(prefix):
+            return source
+    raise ValueError('Unregistered DEB download URL')
+
+
+def download_candidates(record):
+    """Build transport candidates without changing the pinned version/channel."""
+    from source_auth import safe_relative
+    filename = safe_relative(record['Filename'])
+    sources = _byte_sources()
+    registered = {source['base_url'].rstrip('/'): source for source in sources}
+    bases = record.get('DownloadBaseURLs', [])
+    direct = record.get('DownloadURLs', [])
+    if not isinstance(bases, list) or not isinstance(direct, list) or len(bases) > 32 or len(direct) > 32:
+        raise ValueError('Invalid DEB download transport list')
+    for base in bases:
+        if not isinstance(base, str) or base.rstrip('/') not in registered:
+            raise ValueError('Unregistered DEB download base')
+    direct_sources = [(url, approved_download_url(url)) for url in direct]
+    urls = [base.rstrip('/') + '/' + filename for base in BASES[:3]]
+    # Official direct aliases can use another filename or a root-level path.
+    # Never reconstruct them from a different repository's signed Filename.
+    urls += [url for url, source in direct_sources if source.get('owner') == 'Spotify']
+    urls += [base.rstrip('/') + '/' + filename for base in bases if registered[base.rstrip('/')].get('owner') == 'Spotify']
+    urls += [url for url, source in direct_sources if source.get('owner') != 'Spotify']
+    urls += [base.rstrip('/') + '/' + filename for base in bases if registered[base.rstrip('/')].get('owner') != 'Spotify']
+    urls += [base.rstrip('/') + '/' + filename for base in BASES[3:]]
+    if bases or direct:
+        urls += [base + '/' + filename for base in registered]
+    candidates = []
+    for url in dict.fromkeys(urls):
+        source = approved_download_url(url)
+        candidates.append((url, source))
+    return candidates
+
+
+class _DownloadRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        approved_download_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def urlopen(url, timeout=60):
+    # Keep redirects within the same reviewed transport policy as initial URLs.
+    approved_download_url(url)
+    return build_opener(_DownloadRedirect()).open(url, timeout=timeout)
 
 
 def byte_progress(label, completed, total, started):
@@ -80,7 +175,7 @@ def channel_option(args):
 
 
 def active_channel():
-    path = Path('/usr/share/spot..fly..light-client/.spot..fly..light-source.json')
+    path = client_share() / '.spot..fly..light-source.json'
     try:
         channel = json.loads(path.read_text())['Channel']
         if channel not in ('stable', 'unstable'):
@@ -101,7 +196,7 @@ def validate_scan(record):
 
 
 def state_dir():
-    return Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'spot..fly..light-bootstrap'
+    return Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / helper_layout()['state']
 
 
 def consent_digest():
@@ -113,12 +208,15 @@ def approval_subject():
     release = str(record.get('PackagingRelease', 1))
     if not re.fullmatch('[1-9][0-9]*', release):
         raise ValueError('Invalid bootstrap packaging release')
-    return {'version': record['RPMVersion'], 'release': release, 'deb_sha256': record['SHA256'], 'channel': record.get('Channel', 'stable')}
+    subject = {'version': record['RPMVersion'], 'release': release, 'deb_sha256': record['SHA256'], 'channel': record.get('Channel', 'stable')}
+    if helper_layout()['Kind'] == 'archive':
+        subject['helper'] = helper_layout()['Name']
+    return subject
 
 
 def installed_source():
     try:
-        return json.loads(Path('/usr/share/spot..fly..light-client/.spot..fly..light-source.json').read_text())
+        return json.loads((client_share() / '.spot..fly..light-source.json').read_text())
     except (OSError, ValueError):
         return {}
 
@@ -128,7 +226,7 @@ def installed_current(minimum_release=None):
     installed = installed_source()
     if installed.get('Channel') != subject.get('channel', 'stable') or installed.get('SHA256') != subject['deb_sha256']:
         return False
-    result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', 'spot-fly-light-client-local'], capture_output=True, text=True)
+    result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', client_name()], capture_output=True, text=True)
     fields = result.stdout.splitlines()
     if result.returncode or len(fields) != 2 or fields[0] != subject['version']:
         return False
@@ -144,7 +242,7 @@ def pending_install():
         record = json.loads((folder / 'pending-install.json').read_text())
         if record['package'] != subject:
             return None
-        match = re.fullmatch(re.escape('spot-fly-light-client-local-' + subject['version']) + r'-([1-9][0-9]*)[.]x86_64[.]rpm', record['filename'])
+        match = re.fullmatch(re.escape(client_name() + '-' + subject['version']) + r'-([1-9][0-9]*)[.]x86_64[.]rpm', record['filename'])
         if not match or int(match[1]) < int(subject['release']):
             return None
         path = folder / record['filename']
@@ -152,7 +250,7 @@ def pending_install():
             return None
         verify(path, record)
         result = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}\\n%{VERSION}\\n%{RELEASE}\\n', str(path)], capture_output=True, text=True)
-        if result.returncode or result.stdout.splitlines() != ['spot-fly-light-client-local', subject['version'], match[1]]:
+        if result.returncode or result.stdout.splitlines() != [client_name(), subject['version'], match[1]]:
             return None
         return path, int(match[1])
     except (OSError, ValueError, KeyError, TypeError):
@@ -186,13 +284,13 @@ def revoke_local_client():
     # Never remove the user's existing LPF/vendor package or the RPM transaction's
     # bootstrap. Only this project's separately named local target is eligible.
     (state_dir() / 'consent.json').unlink(missing_ok=True)
-    installed = subprocess.run(['rpm', '-q', 'spot-fly-light-client-local'], capture_output=True).returncode == 0
+    installed = subprocess.run(['rpm', '-q', client_name()], capture_output=True).returncode == 0
     if installed:
         if not shutil.which('pkexec'):
-            raise SystemExit('Consent declined. Client will not launch. Administrator removal required: sudo rpm -e spot-fly-light-client-local')
-        result = subprocess.run(['pkexec', shutil.which('rpm'), '-e', 'spot-fly-light-client-local'])
+            raise SystemExit('Consent declined. Client will not launch. Administrator removal required: sudo rpm -e ' + client_name())
+        result = subprocess.run(['pkexec', shutil.which('rpm'), '-e', client_name()])
         if result.returncode:
-            raise SystemExit('Consent declined. Client will not launch. Removal was not authorized or failed; run sudo rpm -e spot-fly-light-client-local.')
+            raise SystemExit('Consent declined. Client will not launch. Removal was not authorized or failed; run sudo rpm -e ' + client_name())
 
 
 def consent(args):
@@ -231,9 +329,9 @@ def has_consent():
 
 def transaction_action(path):
     candidate = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}\\n%{VERSION}-%{RELEASE}\\n', str(path)], capture_output=True, text=True, check=True).stdout.splitlines()
-    if len(candidate) != 2 or candidate[0] != 'spot-fly-light-client-local':
+    if len(candidate) != 2 or candidate[0] != client_name():
         raise ValueError('Unexpected local RPM identity')
-    installed = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', 'spot-fly-light-client-local'], capture_output=True, text=True)
+    installed = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', client_name()], capture_output=True, text=True)
     if installed.returncode:
         return 'install'
     previous, target = installed.stdout.strip(), candidate[1]
@@ -246,16 +344,21 @@ def transaction_action(path):
 
 
 def ensure_client_closed():
+    prefixes = (str(client_share()) + '/',)
+    if helper_layout()['Kind'] == 'current':
+        prefixes += ('/usr/share/sonicradle-client/', '/usr/share/spotify-client/')
     for process in Path('/proc').glob('[0-9]*/exe'):
         try:
             executable = os.readlink(process).removesuffix(' (deleted)')
         except (FileNotFoundError, PermissionError, ProcessLookupError):
             continue
-        if executable.startswith(('/usr/share/spot..fly..light-client/', '/usr/share/sonicradle-client/', '/usr/share/spotify-client/')):
+        if executable.startswith(prefixes):
             raise SystemExit('Close all Spot..Light client processes before replacing the installed client.')
 
 
 def migration_preflight():
+    if helper_layout()['Kind'] == 'archive':
+        return None
     vendor = subprocess.run(['rpm', '-q', 'spotify-client'], capture_output=True)
     if vendor.returncode == 0:
         raise SystemExit('An existing vendor client conflicts with this local package. Review and remove spotify-client with your package manager before setup; no download or rebuild was started.')
@@ -274,6 +377,8 @@ def migration_preflight():
 
 
 def previous_named_target():
+    if helper_layout()['Kind'] == 'archive':
+        return None
     previous = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}\\n%{URL}\\n%{SUMMARY}\\n', 'sonicradle-client-local'], capture_output=True, text=True)
     if previous.returncode:
         return None
@@ -286,14 +391,47 @@ def previous_named_target():
     return fields[0]
 
 
+def renamed_target():
+    """Recognize only this project's former private package, at its exact EVR."""
+    if helper_layout()['Kind'] == 'archive':
+        return None
+    name = 'spot-fly-light-client-local'
+    query = subprocess.run(['rpm', '-q', '--qf', '%{EPOCHNUM}:%{VERSION}-%{RELEASE}\\n%{URL}\\n%{SUMMARY}\\n', name], capture_output=True, text=True)
+    if query.returncode:
+        return None
+    fields = query.stdout.splitlines()
+    owner = subprocess.run(['rpm', '-qf', '--qf', '%{NAME}', str(client_share() / '.vendor-files.sha256')], capture_output=True, text=True)
+    source_owner = subprocess.run(['rpm', '-qf', '--qf', '%{NAME}', str(client_share() / '.spot..fly..light-source.json')], capture_output=True, text=True)
+    bootstrap = subprocess.run(['rpm', '-q', '--qf', '%{URL}', 'spot-fly-light'], capture_output=True, text=True)
+    record = installed_source()
+    try:
+        source_matches = (record.get('Package') == 'spotify-client'
+                          and record.get('Architecture') == 'amd64'
+                          and record.get('Channel') in ('stable', 'unstable')
+                          and re.fullmatch(r'[0-9a-f]{64}', record.get('SHA256', ''))
+                          and fields[0].split(':', 1)[-1].startswith(record['RPMVersion'] + '-'))
+    except (KeyError, IndexError, TypeError):
+        source_matches = False
+    if (len(fields) != 3 or not re.fullmatch(r'[0-9]+:[A-Za-z0-9.+~^-]+', fields[0])
+            or fields[1:] != ['https://www.spotify.com/download/linux/', 'Locally built proprietary Spotify client']
+            or owner.returncode or owner.stdout.strip() != name
+            or source_owner.returncode or source_owner.stdout.strip() != name
+            or bootstrap.returncode or bootstrap.stdout.strip() != 'https://github.com/universish/spotify-client..copr..ci'
+            or not source_matches):
+        raise SystemExit('An unrecognized spot-fly-light-client-local package is installed. Review its origin and resolve the conflict with your package manager before setup; no download or rebuild was started.')
+    return fields[0]
+
+
 def install_local(path):
     ensure_client_closed()
     legacy = migration_preflight()
     previous = previous_named_target()
-    if legacy or previous:
+    renamed = renamed_target()
+    if legacy or previous or renamed:
         obsoletes = subprocess.run(['rpm', '-qp', '--obsoletes', str(path)], capture_output=True, text=True, check=True).stdout.splitlines()
         if ((legacy and 'spotify-client-local = ' + legacy not in obsoletes)
-                or (previous and 'sonicradle-client-local = ' + previous not in obsoletes)):
+                or (previous and 'sonicradle-client-local = ' + previous not in obsoletes)
+                or (renamed and 'spot-fly-light-client-local = ' + renamed not in obsoletes)):
             raise SystemExit('This cached RPM predates the migration fix. Upgrade spot-fly-light, then run spot..fly..light --rebuild. Your existing client and cached RPM have been preserved.')
     if not shutil.which('pkexec'):
         raise SystemExit('Local RPM built. Install it after review with your package manager: ' + str(path))
@@ -308,7 +446,7 @@ def install_local(path):
             except subprocess.CalledProcessError:
                 channel = ' -unstable' if CURRENT_CHANNEL == 'unstable' else ''
                 raise SystemExit('Package installation did not complete. The verified RPM is preserved at ' + str(path)
-                                 + '. Resolve the package-manager error, then retry without downloading or rebuilding: spot..fly..light --install' + channel) from None
+                                 + '. Resolve the package-manager error, then retry without downloading or rebuilding: ' + helper_command() + ' --install' + channel) from None
             return
     raise SystemExit('Local RPM built; install using your system package manager: ' + str(path))
 
@@ -323,12 +461,24 @@ def metadata(path, channel=None):
     if record.get('Channel', 'stable') != channel:
         raise ValueError('Pinned metadata does not match the requested channel')
     version = record['RPMVersion']
+    filename = record.get('Filename', '')
+    safe_path = (isinstance(filename, str) and re.fullmatch(r'[A-Za-z0-9_./+~%-]+', filename)
+                 and not filename.startswith('/') and '..' not in unquote(filename).split('/')
+                 and unquote(filename).split('/')[-1].startswith('spotify-client_')
+                 and filename.endswith('_amd64.deb'))
+    if record.get('Version') or record.get('DebianVersion'):
+        if source_version(record)['rpm_version'] != version:
+            raise ValueError('RPM version does not preserve the Debian source version')
     if (record.get('Package') != 'spotify-client' or record.get('Architecture') != 'amd64'
             or not re.fullmatch(r'[A-Za-z0-9.+~]+', version)
-            or record.get('Filename') != f'pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb'
+            or not safe_path
             or not re.fullmatch(r'[0-9a-f]{64}', record.get('SHA256', ''))
             or int(record['Size']) <= 0):
-        raise ValueError('Invalid pinned official amd64 metadata')
+        raise ValueError('Invalid pinned amd64 metadata')
+    if record.get('Authentication'):
+        from source_auth import validate_record_authentication
+        validate_record_authentication(record, allow_legacy=False)
+    download_candidates(record)  # Validate configured transports without network.
     return record
 
 
@@ -351,9 +501,10 @@ def verify(path, record):
 
 
 def download(record, path, cache=None):
+    candidates = download_candidates(record)
     if os.environ.get('SPOT_FLY_LIGHT_DEB_FILE'):
         cached = Path(os.environ['SPOT_FLY_LIGHT_DEB_FILE'])
-        print('Verifying the configured DEB cache against the official size and SHA256...', flush=True)
+        print('Verifying the configured DEB cache against the pinned size and SHA256...', flush=True)
         verify(cached, record)
         shutil.copy2(cached, path)
         return
@@ -374,21 +525,23 @@ def download(record, path, cache=None):
                 verify(cached, record)
             except (OSError, ValueError):
                 cached.unlink(missing_ok=True)
-                print('Cached DEB failed verification; downloading a fresh official copy.', flush=True)
+                print('Cached DEB failed verification; downloading a fresh pinned copy.', flush=True)
             else:
                 shutil.copy2(cached, path)
                 print('Using the verified private DEB cache; no download needed.', flush=True)
                 return
     errors = []
-    for base in BASES:
+    for url, source in candidates:
         try:
-            kind = 'official source' if base in BASES[:3] else 'community mirror (official hash required)'
-            print('Downloading pinned DEB from ' + kind + ': ' + base, flush=True)
-            with urlopen(base + '/' + record['Filename'], timeout=60) as stream, path.open('wb') as output:
+            kind = 'Spotify transport' if source.get('owner') == 'Spotify' else 'registered mirror (pinned hash required)'
+            print('Downloading pinned DEB from ' + kind + ': ' + url, flush=True)
+            with urlopen(url, timeout=60) as stream, path.open('wb') as output:
                 received = 0
                 started = last_update = time.monotonic()
                 byte_progress('Download', 0, int(record['Size']), started)
                 for block in iter(lambda: stream.read(1024 * 1024), b''):
+                    if received + len(block) > int(record['Size']):
+                        raise ValueError('DEB exceeds the pinned size')
                     output.write(block)
                     received += len(block)
                     now = time.monotonic()
@@ -396,7 +549,7 @@ def download(record, path, cache=None):
                         byte_progress('Download', received, int(record['Size']), started)
                         last_update = now
                 byte_progress('Download', received, int(record['Size']), started)
-            print('Verifying official DEB size and SHA256...', flush=True)
+            print('Verifying pinned DEB size and SHA256...', flush=True)
             verify(path, record)
             if cached is not None:
                 staging = None
@@ -418,23 +571,39 @@ def download(record, path, cache=None):
     raise RuntimeError('Configured DEB download sources failed: ' + ', '.join(errors))
 
 
-def target_spec(version, release, glibc, legacy_release=None, previous_release=None):
+def target_spec(version, release, glibc, legacy_release=None, previous_release=None, depends=None, renamed_release=None):
+    layout = helper_layout()
+    app = layout['client_share']
+    excludes = re.escape(app).replace('\\.', '[.]').replace('/usr/share', '%{_datadir}', 1).replace('\\-', '-')
     if not re.fullmatch(r'[0-9]+(?:[.][0-9]+)*', glibc):
         raise ValueError('Missing official glibc requirement')
     if legacy_release is not None and not re.fullmatch(r'[A-Za-z0-9.+~^-]+', legacy_release):
         raise ValueError('Invalid legacy package release')
     if previous_release is not None and not re.fullmatch(r'[A-Za-z0-9.+~^-]+', previous_release):
         raise ValueError('Invalid previous package release')
+    if renamed_release is not None and not re.fullmatch(r'(?:[0-9]+:)?[A-Za-z0-9.+~^-]+', renamed_release):
+        raise ValueError('Invalid renamed package release')
+    if layout['Kind'] == 'archive' and (legacy_release or previous_release or renamed_release):
+        raise ValueError('An archive cannot replace a current or legacy client')
     migration = f'Obsoletes: spotify-client-local = {legacy_release}\n' if legacy_release else ''
     if previous_release:
         migration += f'Obsoletes: sonicradle-client-local = {previous_release}\n'
+    if renamed_release:
+        migration += f'Obsoletes: spot-fly-light-client-local = {renamed_release}\n'
+    # RPM's ELF dependency generator reads the verified binary's actual NEEDED
+    # entries. A Debian dependency name cannot establish its required SONAME.
+    conflicts = 'Conflicts: spotify-client, spotify-client-local, spot-fly-light-client-local\n' if layout['Kind'] == 'current' else ''
+    spotify_file = '/usr/bin/spotify\n' if layout['Kind'] == 'current' else ''
+    helper_requirement = layout['Name']
+    if 'Version' in layout and 'Release' in layout:
+        helper_requirement += ' >= ' + layout['Version'] + '-' + layout['Release']
     return f'''%global debug_package %{{nil}}
 %global __strip /bin/true
 %global __brp_strip /bin/true
 %global __brp_add_determinism /bin/true
-%global __provides_exclude_from ^%{{_datadir}}/spot[.][.]fly[.][.]light-client/.*$
+%global __provides_exclude_from ^{excludes}/.*$
 %global __requires_exclude ^(libcef|libEGL|libGLESv2|libvk_swiftshader|libvulkan)[.]so.*$
-Name: spot-fly-light-client-local
+Name: {layout['client_name']}
 Version: {version}
 Release: {release}
 Summary: Locally built proprietary Spotify client
@@ -444,47 +613,56 @@ ExclusiveArch: x86_64 x86_64_v2
 Source0: payload.tar
 BuildRequires: coreutils
 BuildRequires: desktop-file-utils
-Requires: spot-fly-light
+Requires: {helper_requirement}
 Requires: glibc >= {glibc}
 Requires: hicolor-icon-theme
 Requires: /usr/bin/dbus-launch
 Requires: /usr/bin/locale
 Requires: (glibc-langpack-en or glibc-locale or locales-en)
-Requires: libayatana-appindicator3.so.1()(64bit)
-Conflicts: spotify-client, spotify-client-local
-{migration}%description
+{conflicts}{migration}%description
 Built on this computer from Spotify's verified DEB. Not for redistribution.
 %prep
 %setup -q -n payload
 %install
 mkdir -p %{{buildroot}}
 cp -a usr %{{buildroot}}/
-find %{{buildroot}}/usr/share/spot..fly..light-client -type d -exec chmod 0755 {{}} +
-find %{{buildroot}}/usr/share/spot..fly..light-client -type f -exec chmod go-w {{}} +
-find %{{buildroot}}/usr/share/spot..fly..light-client -name '*.so*' -type f -exec chmod 0755 {{}} +
-desktop-file-validate %{{buildroot}}/usr/share/applications/spot..fly..light.desktop
+find %{{buildroot}}{app} -type d -exec chmod 0755 {{}} +
+find %{{buildroot}}{app} -type f -exec chmod go-w {{}} +
+find %{{buildroot}}{app} -name '*.so*' -type f -exec chmod 0755 {{}} +
+desktop-file-validate %{{buildroot}}/usr/share/applications/{layout['desktop']}
 %check
-cd %{{buildroot}}/usr/share/spot..fly..light-client
+cd %{{buildroot}}{app}
 sha256sum --quiet -c .vendor-files.sha256
 %files
-/usr/share/spot..fly..light-client/
-/usr/share/applications/spot..fly..light.desktop
-/usr/share/icons/hicolor/*/apps/spot..fly..light.png
+{spotify_file}{app}/
+/usr/share/applications/{layout['desktop']}
+/usr/share/icons/hicolor/*/apps/{layout['icon']}.png
 '''
 
 
 def next_release(record, output):
     version = record['RPMVersion']
+    if helper_layout()['Kind'] == 'archive':
+        name = client_name()
+        revisions = [int(record.get('PackagingRelease', 1)) - 1]
+        pattern = re.escape(name + '-' + version) + r'-([1-9][0-9]*)[.]x86_64[.]rpm'
+        revisions.extend(int(m[1]) for path in output.glob('*.x86_64.rpm') if (m := re.fullmatch(pattern, path.name)))
+        result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', name], capture_output=True, text=True)
+        fields = result.stdout.splitlines()
+        if result.returncode == 0 and len(fields) == 2 and fields[0] == version and re.fullmatch(r'[1-9][0-9]*', fields[1]):
+            revisions.append(int(fields[1]))
+        return max(revisions) + 1
     # Preserve the counter across this project's rename, including private rebuilds.
     state_root = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state')))
     legacy = state_root / 'sonicradle-bootstrap' / version
     revisions = [int(record.get('PackagingRelease', 1)) - 1]
-    for directory, name in ((output, 'spot-fly-light'), (legacy, 'sonicradle'),
-                            (state_root / 'spotify-bootstrap' / version, 'spotify')):
-        pattern = re.escape(name + '-client-local-' + version) + r'-([1-9][0-9]*)[.]x86_64[.]rpm'
+    for directory, name in ((output, client_name()), (output, 'spot-fly-light-client-local'),
+                            (legacy, 'sonicradle-client-local'),
+                            (state_root / 'spotify-bootstrap' / version, 'spotify-client-local')):
+        pattern = re.escape(name + '-' + version) + r'-([1-9][0-9]*)[.]x86_64[.]rpm'
         revisions.extend(int(match[1]) for path in directory.glob('*.x86_64.rpm')
                          if (match := re.fullmatch(pattern, path.name)))
-    for name in ('spot-fly-light-client-local', 'sonicradle-client-local', 'spotify-client-local'):
+    for name in (client_name(), 'spot-fly-light-client-local', 'sonicradle-client-local', 'spotify-client-local'):
         result = subprocess.run(['rpm', '-q', '--qf', '%{VERSION}\\n%{RELEASE}\\n', name], capture_output=True, text=True)
         fields = result.stdout.splitlines()
         if result.returncode == 0 and len(fields) == 2 and fields[0] == version:
@@ -498,15 +676,24 @@ def user_configuration():
     root = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config')))
     flags, assignments = [], []
     for name, collection in [('flags.conf', flags), ('environment.conf', assignments)]:
-        path = root / 'spot..fly..light' / name
-        if not path.exists():
+        path = root / helper_layout()['config'] / name
+        if helper_layout()['Kind'] == 'current' and not path.exists():
             path = root / 'sonicradle' / name
-        if not path.exists():
+        if helper_layout()['Kind'] == 'current' and not path.exists():
             path = root / 'spotify' / name
         if path.is_file():
             collection.extend(line for line in path.read_text().splitlines()
                               if line.strip() and not line.lstrip().startswith('#'))
     return flags, assignments
+
+
+def client_desktop(layout):
+    current = layout['Kind'] == 'current'
+    name = 'Spotify      via Spot..fly..light (unofficial)' if current else 'Spotify via ' + layout['Name'] + ' (unofficial)'
+    command = 'spotify' if current else layout['command']
+    return ('[Desktop Entry]\nType=Application\nName=' + name + '\nExec=' + command + ' %U\nIcon='
+            + layout['icon'] + '\nTerminal=false\nCategories=Audio;Music;Player;AudioVideo;\n'
+            + ('MimeType=x-scheme-handler/spotify;\n' if current else '') + 'StartupWMClass=spotify\n')
 
 
 def setup(args):
@@ -521,6 +708,9 @@ def setup(args):
             raise SystemExit('Missing local build tool: ' + command)
     record = metadata(HERE / 'source.json')
     validate_scan(record)
+    if record.get('SupportedLayout') is False or source_version(record)['numeric'].startswith('0.'):
+        raise SystemExit('This historical client uses an unsupported Qt/application layout; no download or local build was started.')
+    layout = helper_layout()
     version = record['RPMVersion']
     state = state_dir()
     output = state / version
@@ -535,6 +725,7 @@ def setup(args):
         with phase('Checking installed package compatibility', output, step=1, total=steps):
             legacy_release = migration_preflight()
             previous_release = previous_named_target()
+            renamed_release = renamed_target()
         if '--rebuild' not in args and pending:
             if not installed_current(pending[1]):
                 with phase('Installing the verified cached RPM', output, step=2, total=2):
@@ -554,7 +745,7 @@ def setup(args):
             work = Path(tmp)
             deb = work / 'spotify.deb'
             print('ClamAV scanning was completed in GitHub Actions. Local setup only verifies and packages the source.', flush=True)
-            with phase('Obtaining and verifying the official DEB', output, step=2):
+            with phase('Obtaining and verifying the pinned DEB', output, step=2):
                 download(record, deb, cache=state / 'downloads')
             # CI scanned these exact bytes. Only integrity verification runs locally.
             with phase('Extracting and checking the DEB', output, step=3):
@@ -564,12 +755,13 @@ def setup(args):
                     actual = subprocess.check_output(['dpkg-deb', '-f', str(deb), field], text=True).strip()
                     if actual != expected:
                         raise ValueError('Unexpected DEB ' + field)
-                actual_version = subprocess.check_output(['dpkg-deb', '-f', str(deb), 'Version'], text=True).strip().split(':')[-1]
-                if actual_version != version:
+                actual_version = subprocess.check_output(['dpkg-deb', '-f', str(deb), 'Version'], text=True).strip()
+                expected_version = record.get('DebianVersion', record.get('Version', version))
+                if actual_version != expected_version and actual_version.split(':', 1)[-1] != expected_version:
                     raise ValueError('Unexpected DEB version')
             with phase('Preserving and hashing original application files', output, step=4):
                 payload = work / 'payload'
-                app = payload / 'usr/share/spot..fly..light-client'
+                app = payload / layout['client_share'].lstrip('/')
                 app.parent.mkdir(parents=True)
                 shutil.move(str(root / 'usr/share/spotify'), app)
                 manifest = []
@@ -594,12 +786,17 @@ def setup(args):
                     size = icon.stem.removeprefix('spotify-linux-')
                     if not size.isdigit():
                         continue
-                    dest = payload / f'usr/share/icons/hicolor/{size}x{size}/apps/spot..fly..light.png'
+                    dest = payload / f"usr/share/icons/hicolor/{size}x{size}/apps/{layout['icon']}.png"
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(icon, dest)
-                desktop = payload / 'usr/share/applications/spot..fly..light.desktop'
+                desktop = payload / 'usr/share/applications' / layout['desktop']
                 desktop.parent.mkdir(parents=True)
-                desktop.write_text('[Desktop Entry]\nType=Application\nName=Spotify via Spot..Light (unofficial)\nExec=spot..fly..light %U\nIcon=spot..fly..light\nTerminal=false\nCategories=Audio;Music;Player;AudioVideo;\nMimeType=x-scheme-handler/spotify;\nStartupWMClass=spotify\n')
+                desktop.write_text(client_desktop(layout))
+                if layout['Kind'] == 'current':
+                    command = payload / 'usr/bin/spotify'
+                    command.parent.mkdir(parents=True, exist_ok=True)
+                    command.write_text('#!/bin/sh\nexec /usr/bin/spot..fly..light "$@"\n')
+                    command.chmod(0o755)
             top = work / 'rpmbuild'
             for folder in ('SOURCES', 'SPECS', 'BUILD', 'RPMS', 'SRPMS', 'tmp'):
                 (top / folder).mkdir(parents=True)
@@ -609,8 +806,9 @@ def setup(args):
             spec = top / 'SPECS/client.spec'
             match = re.search(r'libc6\s*\(>=\s*([0-9.]+)\)', record.get('Depends', ''))
             if not match:
-                raise ValueError('No official libc6 dependency')
-            spec.write_text(target_spec(version, release, match.group(1), legacy_release, previous_release))
+                raise ValueError('No recorded libc6 dependency')
+            spec.write_text(target_spec(version, release, match.group(1), legacy_release, previous_release,
+                                        record.get('Depends', ''), renamed_release))
             options = ['--nodeps'] if Path('/etc/debian_version').exists() else []
             print('RPM build details: ' + str(output / 'rpm-build.log'), flush=True)
             with phase('Building and verifying the local RPM (no antivirus scan)', output, step=6):
@@ -635,7 +833,7 @@ def launch(args):
         consent(args)
     if not installed_current():
         raise SystemExit('The local client is missing or outdated. Run spot..fly..light --setup to approve, build and install the selected version.')
-    binary = Path('/usr/share/spot..fly..light-client/spotify')
+    binary = client_share() / 'spotify'
     if not binary.is_file():
         raise SystemExit('Spotify is not built yet. Run spot..fly..light --setup to review the local-build instructions.')
     flags, assignments = user_configuration()
@@ -645,6 +843,14 @@ def launch(args):
         if not sep or not re.fullmatch('[A-Za-z_][A-Za-z0-9_]*', key):
             raise ValueError('Invalid environment.conf assignment')
         env[key] = value
+    # Resolve the host's font preferences before the archive changes the vendor
+    # configuration directory. Only this application receives the private cache.
+    from fontconfig_runtime import prepare_fontconfig
+    env, font_info = prepare_fontconfig(env, installed_source(), helper_layout())
+    if helper_layout()['Kind'] == 'archive':
+        config = state_dir() / 'vendor-config'
+        config.mkdir(parents=True, exist_ok=True, mode=0o700)
+        env['XDG_CONFIG_HOME'] = str(config)
     env['LD_LIBRARY_PATH'] = str(binary.parent) + (':' + env['LD_LIBRARY_PATH'] if env.get('LD_LIBRARY_PATH') else '')
     if 'LC_NUMERIC' not in env:
         try:
@@ -664,6 +870,7 @@ def launch(args):
         elif arg == '--accept-spotify-terms': continue
         else: forwarded.append(arg)
     if debug in ('1', 'true'):
+        print('Fontconfig isolation: ' + json.dumps(font_info, sort_keys=True), file=sys.stderr, flush=True)
         flags.extend(['--enable-logging=stderr', '--v=1', '--show-console', '--debug-level=4'])
     import fcntl
     directory = state_dir()
@@ -684,17 +891,19 @@ def client_versions():
     catalog = json.loads((HERE / 'source.json').read_text())
     info = catalog.get('Bootstrap', {})
     print('Spot..Light installer: ' + str(info.get('Version', 'legacy')) + '-' + str(info.get('Release', '?')))
+    if info.get('Kind') == 'archive':
+        print('ARCHIVE: ' + helper_layout()['Name'] + ' (fixed historical pair; isolated from current updates)')
     if info.get('PackagedAt'):
         print('Packaged at: ' + info['PackagedAt'] + ' (' + info.get('Timezone', 'Europe/Stockholm') + ')')
     for channel in ('stable', 'unstable'):
         record = metadata(HERE / 'source.json', channel)
-        print(f"Spotify {channel}: {record['RPMVersion']} (local packaging revision {record.get('PackagingRelease', 1)})")
-        print('  Install: spot..fly..light --setup' + (' -unstable' if channel == 'unstable' else ''))
-    print('These are the scanned versions pinned by this installed helper. Update spot-fly-light to obtain newer source metadata.')
+        print(f"Spotify {channel}: {record.get('DebianVersion', record.get('Version', record['RPMVersion']))} (local packaging revision {record.get('PackagingRelease', 1)})")
+        print('  Install: ' + helper_command() + ' --setup' + (' -unstable' if channel == 'unstable' else ''))
+    print('These are the scanned versions pinned by this installed helper. Update ' + helper_layout()['Name'] + ' to obtain newer source metadata.')
 
 
 def help_text():
-    return '''Spot..Light — independent local installer and launcher
+    text = '''Spot..Light — independent local installer and launcher
 Usage: spot..fly..light [OPTION] [URI]
 Alias: spot-fly-light accepts the same options.
 
@@ -727,6 +936,21 @@ Setup runs as your regular user; the package manager asks for administrator
 authorization only for installation. Antivirus scanning runs in GitHub Actions.
 --update uses this helper's pinned catalog; update spot-fly-light with your package
 manager first to obtain newly published Spotify source versions.'''
+    if helper_layout()['Kind'] == 'archive':
+        text = re.sub(r'spot[.][.]fly[.][.]light|spot-fly-light', lambda match: helper_command(), text)
+        text += '\n\nARCHIVE: this helper uses an isolated historical source pair. Setup requires an explicit command; no autostart is installed.'
+    try:
+        catalog = json.loads((HERE / 'source.json').read_text())
+    except FileNotFoundError:
+        return text
+    info = catalog.get('Bootstrap', {})
+    if info:
+        text += ('\n\nInstalled helper: ' + helper_layout()['Name'] + ' ' + str(info['Version']) + '-'
+                 + str(info['Release']) + '\nPackaged at: ' + str(info['PackagedAt']) + ' (' + str(info['Timezone']) + ')')
+    if all(channel in catalog for channel in ('stable', 'unstable')):
+        for channel in ('stable', 'unstable'):
+            text += '\nPinned Spotify ' + channel + ': ' + source_version(catalog[channel])['raw']
+    return text
 
 
 def main(args=None):
@@ -749,4 +973,4 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
-        raise SystemExit('spot..fly..light: ' + str(exc))
+        raise SystemExit(helper_command() + ': ' + str(exc))

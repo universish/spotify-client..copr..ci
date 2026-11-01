@@ -19,6 +19,7 @@ class BootstrapTests(unittest.TestCase):
         self.addCleanup(patch.stopall)
         patch.object(client, 'migration_preflight', return_value=None).start()
         patch.object(client, 'previous_named_target', return_value=None).start()
+        patch.object(client, 'renamed_target', return_value=None).start()
 
     def record(self, contents=b'fixture'):
         return dict(Package='spotify-client', Architecture='amd64', RPMVersion='1.2.3',
@@ -64,7 +65,7 @@ class BootstrapTests(unittest.TestCase):
 
     def test_local_spec_keeps_integrity_and_runtime_dependencies(self):
         text = client.target_spec('1.2.3', 4, '2.39')
-        self.assertIn('Name: spot-fly-light-client-local', text)
+        self.assertIn('Name: spotify-client-via-spot-fly-light', text)
         self.assertIn('Release: 4', text)
         self.assertIn('Requires: spot-fly-light', text)
         self.assertNotIn('sonicradle', text)
@@ -85,7 +86,7 @@ class BootstrapTests(unittest.TestCase):
             with patch.object(client, 'HERE', path), patch.object(client, 'state_dir', return_value=path), patch.dict(os.environ, DISPLAY=':test'), patch.object(client.shutil, 'which', side_effect=lambda name: '/usr/bin/' + name), patch.object(client.subprocess, 'run', side_effect=calls) as run:
                 with self.assertRaisesRegex(SystemExit, 'Consent declined'):
                     client.consent([])
-                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'spot-fly-light-client-local'])
+                self.assertEqual(run.call_args_list[-1].args[0], ['pkexec', '/usr/bin/rpm', '-e', 'spotify-client-via-spot-fly-light'])
                 self.assertFalse((path / 'consent.json').exists())
 
     def test_failed_removal_does_not_keep_a_prior_acceptance(self):
@@ -164,9 +165,9 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             folder=root/'1.2.3';folder.mkdir()
-            rpm=folder/'spot-fly-light-client-local-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
+            rpm=folder/'spotify-client-via-spot-fly-light-1.2.3-4.x86_64.rpm';rpm.write_bytes(b'fixture-rpm')
             subject={'version':'1.2.3','release':'4','deb_sha256':'1'*64}
-            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='spot-fly-light-client-local\n1.2.3\n4\n')):
+            with patch.object(client,'state_dir',return_value=root), patch.object(client,'approval_subject',return_value=subject), patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='spotify-client-via-spot-fly-light\n1.2.3\n4\n')):
                 client.remember_pending(rpm)
                 self.assertEqual(client.pending_install(),(rpm,4))
                 rpm.write_bytes(b'changed-after-build')
@@ -243,8 +244,8 @@ class ChannelAndCIScanTests(unittest.TestCase):
         stable=client.target_spec('1.2.3',1,'2.39')
         unstable=client.target_spec('1.3.4',1,'2.39')
         for spec in (stable,unstable):
-            self.assertIn('Name: spot-fly-light-client-local\n',spec)
-            self.assertNotIn('Name: spot-fly-light-client-local-unstable',spec)
+            self.assertIn('Name: spotify-client-via-spot-fly-light\n',spec)
+            self.assertNotIn('Name: spotify-client-via-spot-fly-light-unstable',spec)
             self.assertNotIn('Provides: spotify-client',spec)
 
     def test_local_setup_contains_no_clamav_install_or_scan(self):
@@ -260,13 +261,13 @@ class LocalTransactionTests(unittest.TestCase):
     def test_downgrade_and_upgrade_use_native_rpm_ordering(self):
         from types import SimpleNamespace
         for comparison, expected in [('-1', 'downgrade'),('1','install'),('0','reinstall')]:
-            results=[SimpleNamespace(stdout='spot-fly-light-client-local\n1.2.95-1\n'),
+            results=[SimpleNamespace(stdout='spotify-client-via-spot-fly-light\n1.2.95-1\n'),
                      SimpleNamespace(returncode=0,stdout='1.3.4-1'),SimpleNamespace(stdout=comparison)]
             with self.subTest(comparison=comparison),patch.object(client.subprocess,'run',side_effect=results):
                 self.assertEqual(client.transaction_action(Path('/client.rpm')),expected)
 
     def test_dnf_channel_downgrade_is_explicit(self):
-        with patch.object(client,'previous_named_target',return_value=None),patch.object(client,'migration_preflight',return_value=None),patch.object(client,'ensure_client_closed'),patch.object(client,'transaction_action',return_value='downgrade'),patch.object(client.shutil,'which',side_effect=lambda tool:'/usr/bin/'+tool),patch.object(client.subprocess,'run') as run:
+        with patch.object(client,'renamed_target',return_value=None),patch.object(client,'previous_named_target',return_value=None),patch.object(client,'migration_preflight',return_value=None),patch.object(client,'ensure_client_closed'),patch.object(client,'transaction_action',return_value='downgrade'),patch.object(client.shutil,'which',side_effect=lambda tool:'/usr/bin/'+tool),patch.object(client.subprocess,'run') as run:
             client.install_local(Path('/client.rpm'))
             run.assert_called_once_with(['pkexec','/usr/bin/dnf','downgrade','-y','/client.rpm'],check=True)
 
@@ -275,6 +276,7 @@ class RunningAndPendingTests(unittest.TestCase):
     def setUp(self):
         self.addCleanup(patch.stopall)
         patch.object(client, 'migration_preflight', return_value=None).start()
+        patch.object(client, 'renamed_target', return_value=None).start()
 
     def test_current_cached_rpm_does_not_reinstall(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -298,7 +300,7 @@ class RenamedClientMigrationTests(unittest.TestCase):
 
     def test_new_target_replaces_only_our_previous_target(self):
         text=client.target_spec('1.2.3',7,'2.39',previous_release='1.2.3-6')
-        self.assertIn('Name: spot-fly-light-client-local',text)
+        self.assertIn('Name: spotify-client-via-spot-fly-light',text)
         self.assertIn('Obsoletes: sonicradle-client-local = 1.2.3-6',text)
         self.assertNotIn('Obsoletes: spotify-client',text)
         self.assertIn('Conflicts: spotify-client, spotify-client-local',text)
@@ -324,14 +326,84 @@ class RenameConfigurationAndReleaseTests(unittest.TestCase):
             root=Path(tmp);legacy=root/'sonicradle-bootstrap/1.2.3';legacy.mkdir(parents=True)
             (legacy/'sonicradle-client-local-1.2.3-12.x86_64.rpm').touch()
             output=root/'current';output.mkdir()
-            installed=[SimpleNamespace(returncode=1,stdout=''),SimpleNamespace(returncode=0,stdout='1.2.3\n15.fc44\n'),SimpleNamespace(returncode=1,stdout='')]
+            installed=[SimpleNamespace(returncode=1,stdout=''),SimpleNamespace(returncode=1,stdout=''),SimpleNamespace(returncode=0,stdout='1.2.3\n15.fc44\n'),SimpleNamespace(returncode=1,stdout='')]
             with patch.dict(os.environ,XDG_STATE_HOME=tmp),patch.object(client.subprocess,'run',side_effect=installed):
                 self.assertEqual(client.next_release({'RPMVersion':'1.2.3','PackagingRelease':7},output),16)
             with patch.dict(os.environ,XDG_STATE_HOME=tmp),patch.object(client.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='1.2.3\n15.fc44\n')):
                 self.assertEqual(client.next_release({'RPMVersion':'1.2.4','PackagingRelease':1},output),1)
 
+    def test_current_and_pre_rename_cached_rpms_share_one_counter(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            for name in ('spot-fly-light-client-local-1.2.3-20.x86_64.rpm',
+                         'spotify-client-via-spot-fly-light-1.2.3-21.x86_64.rpm'):
+                (output / name).touch()
+            with patch.object(client.subprocess, 'run', return_value=SimpleNamespace(returncode=1, stdout='')):
+                self.assertEqual(client.next_release({'RPMVersion':'1.2.3'}, output), 22)
+
+
+class PrivateClientIdentityTests(unittest.TestCase):
+    def replies(self, owner='spot-fly-light-client-local'):
+        from types import SimpleNamespace
+        return [SimpleNamespace(returncode=0, stdout='0:1.3.4.258.gc60b10b0946a-2\nhttps://www.spotify.com/download/linux/\nLocally built proprietary Spotify client\n'),
+                SimpleNamespace(returncode=0, stdout=owner), SimpleNamespace(returncode=0, stdout=owner),
+                SimpleNamespace(returncode=0, stdout='https://github.com/universish/spotify-client..copr..ci')]
+
+    def test_old_private_client_migration_is_provenance_checked_and_exact_evr(self):
+        record = {'Package':'spotify-client', 'Architecture':'amd64', 'Channel':'unstable',
+                  'RPMVersion':'1.3.4.258.gc60b10b0946a', 'SHA256':'a'*64}
+        with patch.object(client.subprocess, 'run', side_effect=self.replies()), patch.object(client, 'installed_source', return_value=record):
+            previous = client.renamed_target()
+        self.assertEqual(previous, '0:1.3.4.258.gc60b10b0946a-2')
+        text = client.target_spec('1.3.4.258.gc60b10b0946a', 3, '2.39', renamed_release=previous)
+        self.assertIn('Obsoletes: spot-fly-light-client-local = 0:1.3.4.258.gc60b10b0946a-2\n', text)
+        self.assertIn('/usr/bin/spotify\n', text)
+        self.assertNotIn('Obsoletes: spotify-client\n', text)
+        self.assertNotIn('libayatana-appindicator3.so', text)
+        self.assertNotIn('libappindicator3.so', text)
+        for owner, version in [('another-package', record['RPMVersion']),
+                               ('spot-fly-light-client-local', '1.2.3')]:
+            with self.subTest(owner=owner, version=version), patch.object(client.subprocess, 'run', side_effect=self.replies(owner)), patch.object(client, 'installed_source', return_value=dict(record, RPMVersion=version)):
+                with self.assertRaisesRegex(SystemExit, 'unrecognized'):
+                    client.renamed_target()
+
+    def test_current_desktop_uses_requested_name_and_default_spotify_command(self):
+        desktop = client.client_desktop(client.current_paths())
+        self.assertIn('\nName=Spotify      via Spot..fly..light (unofficial)\n', desktop)
+        self.assertIn('\nExec=spotify %U\n', desktop)
+        self.assertIn('\nTerminal=false\n', desktop)
+
+    def test_private_rpm_requires_a_helper_that_knows_its_new_package_name(self):
+        current = dict(client.current_paths(), Version='26.11.01', Release='3')
+        archive = dict(current, Kind='archive', Name='spot-fly-light-st1.2.3.4-unst1.3.4.5',
+                       Version='0', Release='2')
+        for layout in (current, archive):
+            with self.subTest(kind=layout['Kind']), patch.object(client, 'helper_layout', return_value=layout):
+                spec=client.target_spec('1.2.3.4', 1, '2.39')
+                self.assertIn('Requires: ' + layout['Name'] + ' >= ' + layout['Version'] + '-' + layout['Release'] + '\n', spec)
+
+    def test_archive_cannot_replace_current_clients_or_own_default_spotify_command(self):
+        layout = dict(client.current_paths(), Kind='archive', Name='spot-fly-light-st1.2.3.4-unst1.3.4.5',
+                      command='spot-fly-light-st1.2.3.4-unst1.3.4.5',
+                      client_name='spotify-client-via-spot-fly-light-st1.2.3.4-unst1.3.4.5')
+        with patch.object(client, 'helper_layout', return_value=layout), patch.object(client.subprocess, 'run') as run:
+            self.assertIsNone(client.renamed_target())
+            text = client.target_spec('1.2.3.4', 1, '2.39')
+            self.assertNotIn('/usr/bin/spotify', text)
+            self.assertNotIn('Obsoletes:', text)
+            self.assertNotIn('Conflicts:', text)
+            self.assertNotIn('Exec=spotify %U', client.client_desktop(layout))
+            with self.assertRaises(ValueError):
+                client.target_spec('1.2.3.4', 1, '2.39', renamed_release='0:1.2.3.4-1')
+            run.assert_not_called()
+
 
 class LegacyGPUEnvironmentTests(unittest.TestCase):
+    def setUp(self):
+        self.fonts = patch('fontconfig_runtime.prepare_fontconfig', side_effect=lambda env, record, profile: (env, {}))
+        self.fonts.start(); self.addCleanup(self.fonts.stop)
+
     def test_legacy_gpu_settings_work_and_explicit_new_settings_win(self):
         with tempfile.TemporaryDirectory() as tmp:
             for current,expected in [(False,('nvidia','1')),(True,('software','0'))]:
@@ -341,6 +413,33 @@ class LegacyGPUEnvironmentTests(unittest.TestCase):
                 with self.subTest(current=current),patch.dict(os.environ,env,clear=True),patch.object(client,'active_channel',return_value='stable'),patch.object(client,'has_consent',return_value=True),patch.object(client,'installed_current',return_value=True),patch.object(client.Path,'is_file',return_value=True),patch.object(client,'user_configuration',return_value=([],[])),patch.object(client,'state_dir',return_value=Path(tmp)),patch.object(os,'execve') as execute:
                     client.launch([])
                     self.assertEqual(tuple(execute.call_args.args[1][3:5]),expected)
+
+    def test_font_preferences_are_resolved_before_archive_vendor_config_isolation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            layout = dict(client.current_paths(), Kind='archive', Name='archive-fixture', state='archive-fixture')
+            observed = []
+            def prepare(env, record, profile):
+                observed.append(dict(env))
+                self.assertEqual(record, {'SHA256':'a'*64})
+                self.assertEqual(profile['Kind'], 'archive')
+                return dict(env, FONTCONFIG_FILE='/private/fontconfig/fonts.conf'), {'cache':'private'}
+            with patch.dict(os.environ, {'LC_NUMERIC':'C', 'XDG_CONFIG_HOME':'/user/font-preferences'}, clear=True), \
+                    patch.object(client, 'helper_layout', return_value=layout), \
+                    patch.object(client, 'active_channel', return_value='stable'), \
+                    patch.object(client, 'has_consent', return_value=True), \
+                    patch.object(client, 'installed_current', return_value=True), \
+                    patch.object(client.Path, 'is_file', return_value=True), \
+                    patch.object(client, 'installed_source', return_value={'SHA256':'a'*64}), \
+                    patch.object(client, 'user_configuration', return_value=([], ['CUSTOM_FONT_PREF=yes'])), \
+                    patch.object(client, 'state_dir', return_value=Path(tmp)), \
+                    patch('fontconfig_runtime.prepare_fontconfig', side_effect=prepare), \
+                    patch.object(os, 'execve') as execute:
+                client.launch([])
+            self.assertEqual(observed[0]['XDG_CONFIG_HOME'], '/user/font-preferences')
+            self.assertEqual(observed[0]['CUSTOM_FONT_PREF'], 'yes')
+            launched_env = execute.call_args.args[2]
+            self.assertEqual(launched_env['FONTCONFIG_FILE'], '/private/fontconfig/fonts.conf')
+            self.assertEqual(launched_env['XDG_CONFIG_HOME'], str(Path(tmp) / 'vendor-config'))
 
 
 class OlderLocalPackageMigrationTests(unittest.TestCase):
@@ -376,7 +475,7 @@ class OlderLocalPackageMigrationTests(unittest.TestCase):
 
     def test_old_cached_rpm_explains_rebuild_instead_of_retrying_failed_install(self):
         from types import SimpleNamespace
-        with patch.object(client,'previous_named_target',return_value=None),patch.object(client,'ensure_client_closed'),patch.object(client,'migration_preflight',return_value='1.2.95-4'),patch.object(client.subprocess,'run',return_value=SimpleNamespace(stdout='')) as run:
+        with patch.object(client,'renamed_target',return_value=None),patch.object(client,'previous_named_target',return_value=None),patch.object(client,'ensure_client_closed'),patch.object(client,'migration_preflight',return_value='1.2.95-4'),patch.object(client.subprocess,'run',return_value=SimpleNamespace(stdout='')) as run:
             with self.assertRaisesRegex(SystemExit,'predates the migration fix'):
                 client.install_local(Path('/old.rpm'))
             self.assertEqual(run.call_count,1)
@@ -427,6 +526,84 @@ class PrivateDEBCacheTests(unittest.TestCase):
             self.assertEqual(cached.read_bytes(),contents)
 
 
+class DownloadTransportTests(unittest.TestCase):
+    def record(self, contents=b'pinned-deb'):
+        version='1.2.86.502.g8cd7fb22'
+        return {'SHA256':hashlib.sha256(contents).hexdigest(), 'Size':len(contents),
+            'Filename':f'pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb',
+            'DownloadURLs':[f'https://fosszone.csd.auth.gr/linuxlite/pool/main/s/spotify-client/spotify-client_{version}_amd64.deb'],
+            'DownloadBaseURLs':['https://fosszone.csd.auth.gr/linuxlite']}
+
+    def test_exact_historical_mirror_url_is_used_after_three_official_sources(self):
+        import io
+        from urllib.error import URLError
+        record=self.record(); observed=[]
+        def fetch(url, **kwargs):
+            observed.append(url)
+            if url==record['DownloadURLs'][0]:
+                return io.BytesIO(b'pinned-deb')
+            raise URLError('fixture unavailable')
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {}, clear=True), patch.object(client, 'urlopen', side_effect=fetch):
+            path=Path(tmp)/'client.deb';client.download(record,path)
+            self.assertEqual(path.read_bytes(),b'pinned-deb')
+        self.assertEqual(observed[:3],[base+'/'+record['Filename'] for base in client.BASES[:3]])
+        self.assertEqual(observed[3],record['DownloadURLs'][0])
+        self.assertIn('/pool/main/', observed[3])
+
+    def test_official_root_alias_preserves_its_explicit_short_filename(self):
+        import io
+        from urllib.error import URLError
+        record=self.record()
+        record['Filename']='pool/non-free/s/spotify-client/spotify-client_1.2.74.477.g3be53afe_amd64.deb'
+        alias='https://download.spotify.com/spotify-client_1.2.74.477_amd64.deb'
+        record['DownloadURLs']=[alias];record['DownloadBaseURLs']=list(client.BASES)
+        observed=[]
+        def fetch(url, **kwargs):
+            observed.append(url)
+            if url==alias:return io.BytesIO(b'pinned-deb')
+            raise URLError('fixture unavailable')
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {}, clear=True), patch.object(client, 'urlopen', side_effect=fetch):
+            path=Path(tmp)/'client.deb';client.download(record,path)
+            self.assertEqual(path.read_bytes(),b'pinned-deb')
+        self.assertEqual(observed[3],alias)
+        self.assertNotIn('.g3be53afe',observed[3])
+
+    def test_registered_record_base_is_used_and_corrupt_mirror_bytes_never_survive(self):
+        import io
+        from urllib.error import URLError
+        record=self.record(); observed=[]
+        fallback=record['DownloadBaseURLs'][0]+'/'+record['Filename']
+        def fetch(url, **kwargs):
+            observed.append(url)
+            if url==record['DownloadURLs'][0]:
+                return io.BytesIO(b'corruptdeb')  # Same size, wrong pinned hash.
+            if url==fallback:
+                return io.BytesIO(b'pinned-deb')
+            raise URLError('fixture unavailable')
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {}, clear=True), patch.object(client, 'urlopen', side_effect=fetch):
+            path=Path(tmp)/'client.deb';client.download(record,path)
+            self.assertEqual(path.read_bytes(),b'pinned-deb')
+        self.assertEqual(observed[3:5],[record['DownloadURLs'][0],fallback])
+
+    def test_unregistered_or_unsafe_urls_are_rejected_before_any_network_request(self):
+        cases=['https://unregistered.invalid/spotify.deb', 'https://localhost/spotify.deb', 'file:///tmp/spotify.deb',
+            'https://fosszone.csd.auth.gr/linuxlite-other/spotify.deb',
+            'https://fosszone.csd.auth.gr/linuxlite/../spotify.deb',
+            'https://fosszone.csd.auth.gr/linuxlite/%2e%2e/spotify.deb',
+            'https://fosszone.csd.auth.gr/linuxlite/spotify.deb?payload=1',
+            'https://fosszone.csd.auth.gr/linuxlite/\nspotify.deb',
+            'https://user@fosszone.csd.auth.gr/linuxlite/spotify.deb']
+        for url in cases:
+            record=self.record();record['DownloadURLs']=[url]
+            with self.subTest(url=url), tempfile.TemporaryDirectory() as tmp, patch.object(client, 'urlopen') as network:
+                with self.assertRaises(ValueError):client.download(record,Path(tmp)/'client.deb')
+                network.assert_not_called()
+
+    def test_redirect_cannot_escape_registered_https_transports(self):
+        with self.assertRaises(ValueError):
+            client._DownloadRedirect().redirect_request(None,None,302,'redirect',{},'https://unregistered.invalid/spotify.deb')
+
+
 class LiveFeedbackAndCommandTests(unittest.TestCase):
     def test_help_aliases_are_readonly_and_document_requested_commands(self):
         import contextlib, io
@@ -448,7 +625,7 @@ class LiveFeedbackAndCommandTests(unittest.TestCase):
                     Filename=f'pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb',SHA256='a'*64,Size=10,PackagingRelease=7)
             records['Bootstrap']={'Version':'26.10.31','Release':2,'PackagedAt':'2026-10-31T12:00:00+01:00','Timezone':'Europe/Stockholm'}
             (root/'source.json').write_text(json.dumps(records))
-            for option in ('--client-versions','-cl.ver'):
+            for option in ('--client-versions','-cl.ver','--help'):
                 with patch.object(client,'HERE',root),patch.object(client,'consent') as consent,patch.object(client,'download') as download:
                     output=io.StringIO()
                     with contextlib.redirect_stdout(output):client.main([option])

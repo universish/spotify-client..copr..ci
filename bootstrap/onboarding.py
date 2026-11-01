@@ -130,14 +130,18 @@ def offer():
                 return 0
         except (FileNotFoundError, ValueError):
             pass
+        bootstrap = data['Bootstrap']
+        packaged = bootstrap.get('PackagedAt', 'unknown')
+        zone = bootstrap.get('Timezone', 'Europe/Stockholm')
         result = subprocess.run([
             zenity, '--list', '--radiolist', '--title=Spot..Light: choose a client channel',
-            '--text=Which Spotify client would you like to build and install?\nThe terminal will show the legal notice and every setup stage.',
+            '--text=Spot..Light ' + identity + '\nPackaged at: ' + packaged + ' (' + zone + ')'
+            + '\nChoose one of the source versions pinned by this installed helper.\nThe terminal will show the legal notice and every setup stage.',
             '--column=Choose', '--column=Channel', '--column=Spotify client version',
             '--print-column=2', '--ok-label=Open setup terminal', '--cancel-label=Not now',
             '--width=650', '--height=310',
-            'TRUE', 'stable', data['stable']['RPMVersion'],
-            'FALSE', 'unstable', data['unstable']['RPMVersion'],
+            'TRUE', 'stable', data['stable'].get('DebianVersion', data['stable'].get('Version', data['stable']['RPMVersion'])),
+            'FALSE', 'unstable', data['unstable'].get('DebianVersion', data['unstable'].get('Version', data['unstable']['RPMVersion'])),
         ], text=True, stdout=subprocess.PIPE, env=dict(os.environ, LC_ALL='C.UTF-8', LANGUAGE='en'), check=False)
         if result.returncode == 1:
             remember(marker, identity, 'dismissed')

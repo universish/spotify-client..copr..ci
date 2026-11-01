@@ -144,6 +144,16 @@ class PlanningTests(unittest.TestCase):
 
 
 class ReservationTests(unittest.TestCase):
+    def test_fixture_main_never_writes_inherited_runner_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, outputs = Path(tmp) / 'runner-summary', Path(tmp) / 'runner-outputs'
+            summary.write_text('production summary\n')
+            outputs.write_text('production outputs\n')
+            with mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': str(summary), 'GITHUB_OUTPUT': str(outputs)}):
+                self.test_main_keeps_channel_revisions_when_reserving_dated_helper()
+            self.assertEqual(summary.read_text(), 'production summary\n')
+            self.assertEqual(outputs.read_text(), 'production outputs\n')
+
     def test_main_keeps_channel_revisions_when_reserving_dated_helper(self):
         previous = dict(ref('1.2.3', 8), reservation={'channels': {
             'stable': {'version': '1.2.3', 'release': 8},
@@ -155,9 +165,10 @@ class ReservationTests(unittest.TestCase):
             environment = {'GITHUB_REPOSITORY': 'owner/project', 'GH_TOKEN': 'private',
                 'GITHUB_SHA': 'a' * 40, 'SPOT_FLY_LIGHT_METADATA_DIR': tmp,
                 'GITHUB_OUTPUT': str(Path(tmp) / 'outputs'),
+                'GITHUB_STEP_SUMMARY': str(Path(tmp) / 'summary'),
                 'COPR_CONFIG': '[copr-cli]\nlogin=l\nusername=u\ntoken=t\ncopr_url=https://copr.fedorainfracloud.org\n'}
             identity = {'Version': '26.10.31', 'PackagedAt': '2026-10-31T05:00:00+01:00', 'Timezone': 'Europe/Stockholm'}
-            with (mock.patch.dict(os.environ, environment), mock.patch.object(planner.sys, 'argv', ['plan', '--event', 'workflow_dispatch']),
+            with (mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(planner.sys, 'argv', ['plan', '--event', 'workflow_dispatch']),
                   mock.patch.object(planner, 'fetch_package', side_effect=[{'RPMVersion': '1.2.3'}, {'RPMVersion': '2.0'}]),
                   mock.patch.object(planner, 'packaging_identity', return_value=identity),
                   mock.patch.object(planner, 'GitHub', return_value=api),
@@ -257,7 +268,7 @@ class FinalizationTests(unittest.TestCase):
                   mock.patch.object(planner, 'GitHub') as github, mock.patch.object(planner, 'copr_builds') as copr,
                   mock.patch.object(planner, 'fetch_package') as fetch,
                   mock.patch.object(planner.sys, 'argv', ['plan', '--finalize', str(path)]),
-                  mock.patch.dict(os.environ, {'GITHUB_OUTPUT': str(outputs)}),
+                  mock.patch.dict(os.environ, {'GITHUB_OUTPUT': str(outputs), 'GITHUB_STEP_SUMMARY': str(Path(tmp) / 'summary')}, clear=True),
                   mock.patch('sys.stdout', new_callable=io.StringIO)):
                 planner.main()
             updated = json.loads(path.read_text())
@@ -284,7 +295,7 @@ class FinalizationTests(unittest.TestCase):
                   mock.patch.object(planner, 'GitHub', return_value=api),
                   mock.patch.object(planner, 'copr_builds', return_value=[]),
                   mock.patch.object(planner, 'fetch_package') as fetch,
-                  mock.patch.dict(os.environ, environment)):
+                  mock.patch.dict(os.environ, environment, clear=True)):
                 result, _ = planner.finalize(path, 'owner/project')
             updated = json.loads(path.read_text())
             self.assertEqual((result['version'], result['release'], result['tag']),
@@ -294,8 +305,8 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(updated['unstable'], catalog['unstable'])
             reservation = json.loads(api.call.call_args_list[0].args[1]['message'])
             self.assertEqual(reservation['signature'], planner.source_signature(catalog))
-            self.assertEqual(reservation['channels'], {'stable': {'version': '1.2.3', 'release': 9},
-                                                       'unstable': {'version': '2.0', 'release': 3}})
+            self.assertEqual(reservation['channels'], {'stable': {'version': '1.2.3', 'debian_version': '1.2.3', 'release': 9},
+                                                       'unstable': {'version': '2.0', 'debian_version': '2.0', 'release': 3}})
             self.assertEqual(reservation['bootstrap'], dict(current, Release=2))
             fetch.assert_not_called()
 
@@ -307,7 +318,7 @@ class FinalizationTests(unittest.TestCase):
                 path.write_text(original)
                 with (mock.patch.object(planner, 'packaging_identity', return_value={'Version': '26.11.01'}),
                       mock.patch.object(planner, 'GitHub') as github,
-                      mock.patch.dict(os.environ, {'GH_TOKEN': token, 'COPR_CONFIG': config})):
+                      mock.patch.dict(os.environ, {'GH_TOKEN': token, 'COPR_CONFIG': config}, clear=True)):
                     with self.assertRaises(ValueError): planner.finalize(path, 'owner/project')
                 self.assertEqual(path.read_text(), original)
                 github.assert_not_called()

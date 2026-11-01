@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "id": "spotify-download",
+      "owner": "Spotify",
+      "kind": "spotify",
+      "enabled": true,
+      "base_url": "https://download.spotify.com/debian",
+      "roles": [
+        "metadata",
+        "bytes"
+      ],
+      "fingerprint": "E1096BCBFF6D418796DE78515384CE82BA52C83A",
+      "key_file": "keys/spotify.asc",
+      "key_url": "https://download.spotify.com/debian/pubkey_5384CE82BA52C83A.asc",
+      "owner_evidence": "https://www.spotify.com/us/download/linux/",
+      "distributions": {
+        "stable": {
+          "index_path": "non-free/binary-amd64/Packages"
+        },
+        "testing": {
+          "index_path": "non-free/binary-amd64/Packages"
+        }
+      }
+    },
+    {
+      "id": "spotify-repository",
+      "owner": "Spotify",
+      "kind": "spotify",
+      "enabled": true,
+      "base_url": "https://repository.spotify.com",
+      "roles": [
+        "metadata",
+        "bytes"
+      ],
+      "fingerprint": "E1096BCBFF6D418796DE78515384CE82BA52C83A",
+      "key_file": "keys/spotify.asc",
+      "owner_evidence": "https://www.spotify.com/us/download/linux/",
+      "distributions": {
+        "stable": {
+          "index_path": "non-free/binary-amd64/Packages"
+        },
+        "testing": {
+          "index_path": "non-free/binary-amd64/Packages"
+        }
+      }
+    },
+    {
+      "id": "spotify-origin",
+      "owner": "Spotify",
+      "kind": "spotify",
+      "enabled": true,
+      "base_url": "https://repository-origin.spotify.com",
+      "roles": [
+        "metadata",
+        "bytes"
+      ],
+      "fingerprint": "E1096BCBFF6D418796DE78515384CE82BA52C83A",
+      "key_file": "keys/spotify.asc",
+      "owner_evidence": "https://www.spotify.com/us/download/linux/",
+      "distributions": {
+        "stable": {
+          "index_path": "non-free/binary-amd64/Packages"
+        },
+        "testing": {
+          "index_path": "non-free/binary-amd64/Packages"
+        }
+      }
+    },
+    {
+      "id": "rug-spotify-bytes",
+      "owner": "University of Groningen mirror operators",
+      "kind": "byte-mirror",
+      "enabled": true,
+      "base_url": "https://deb.rug.nl/ppa/mirror/repository.spotify.com",
+      "roles": [
+        "bytes"
+      ],
+      "owner_evidence": "https://deb.rug.nl/ppa/mirror/repository.spotify.com/",
+      "verification": "Only exact bytes pinned by an authenticated source record; never version/channel authority"
+    },
+    {
+      "id": "mint-cvut",
+      "owner": "Linux Mint via the official Silicon Hill / CVUT mirror",
+      "kind": "distribution",
+      "enabled": true,
+      "base_url": "https://ftp.sh.cvut.cz/mint",
+      "roles": [
+        "historical-metadata",
+        "metadata",
+        "bytes"
+      ],
+      "fingerprint": "302F0738F465C1535761F965A6616109451BBBF2",
+      "key_file": "keys/linuxmint.asc",
+      "key_source": "https://ftp.sh.cvut.cz/mint/pool/main/l/linuxmint-keyring/linuxmint-keyring_2022.06.21.tar.gz",
+      "owner_evidence": "https://www.linuxmint.com/mirrors.php",
+      "distributions": {
+        "virginia": {
+          "index_path": "import/binary-amd64/Packages"
+        }
+      }
+    },
+    {
+      "id": "linuxlite-official",
+      "owner": "Linux Lite",
+      "kind": "distribution",
+      "enabled": true,
+      "base_url": "https://repo.linuxliteos.com/linuxlite",
+      "roles": [
+        "historical-metadata",
+        "metadata",
+        "bytes"
+      ],
+      "key_url": "https://repo.linuxliteos.com/linuxlite/linuxlite-archive-keyring.gpg",
+      "owner_evidence": "https://www.linuxliteos.com/forums/showthread.php?tid=9862",
+      "verification": "Hematite signed index validated against the pinned current RSA4096 primary and signing subkey; other suites are not enabled",
+      "distributions": {
+        "hematite": {
+          "index_path": "main/binary-amd64/Packages"
+        }
+      },
+      "fingerprint": "CB38D02B85C9274CB13041B57F2B3FFE35099647",
+      "key_file": "keys/linuxlite.gpg"
+    },
+    {
+      "id": "mx-candidate",
+      "owner": "MX Linux",
+      "kind": "candidate",
+      "enabled": false,
+      "base_url": "https://mxrepo.com",
+      "roles": [],
+      "verification": "No authenticated spotify-client record established"
+    },
+    {
+      "id": "pardus-candidate",
+      "owner": "Pardus",
+      "kind": "candidate",
+      "enabled": false,
+      "base_url": "https://depo.pardus.org.tr",
+      "roles": [],
+      "verification": "No authenticated spotify-client record established"
+    },
+    {
+      "id": "auth-linuxlite-bytes",
+      "owner": "Aristotle University of Thessaloniki, officially listed Linux Lite mirror",
+      "kind": "byte-mirror",
+      "enabled": true,
+      "base_url": "https://fosszone.csd.auth.gr/linuxlite",
+      "roles": [
+        "bytes"
+      ],
+      "owner_evidence": "https://www.linuxliteos.com/forums/showthread.php?tid=9855",
+      "verification": "Exact authenticated DEB hash and size only; no Spotify version or channel authority"
+    },
+    {
+      "id": "spotify-download-aliases",
+      "owner": "Spotify",
+      "kind": "byte-mirror",
+      "enabled": true,
+      "base_url": "https://download.spotify.com",
+      "roles": [
+        "bytes"
+      ],
+      "owner_evidence": "https://community.spotify.com/forum/en/discussion/comment/7325365",
+      "verification": "Official download aliases for exact authenticated DEB hashes; not a metadata or channel source"
+    }
+  ]
+}

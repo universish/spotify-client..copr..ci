@@ -14,11 +14,13 @@ from urllib import error, request
 from urllib.parse import urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
-REPOSITORIES = ("https://download.spotify.com/debian", "https://repository.spotify.com",
-                "https://repository-origin.spotify.com")
-# A community mirror can transport pinned bytes, but never supplies trusted
-# version/channel/checksum metadata. Official source hashes remain mandatory.
-DOWNLOAD_BASES = (*REPOSITORIES, "https://deb.rug.nl/ppa/mirror/repository.spotify.com")
+# Keep one reviewed registry for metadata authorities and byte transports.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import source_auth
+from release_identity import parse_debian_version
+
+REPOSITORIES = tuple(s['base_url'] for s in source_auth.spotify_sources())
+DOWNLOAD_BASES = source_auth.download_bases()
 CHANNELS = {"stable": "stable", "unstable": "testing", "testing": "testing"}
 RPMFUSION = "https://download1.rpmfusion.org/nonfree/fedora/"
 # Fedora's testing repository is not Spotify's testing channel. These checks are
@@ -100,93 +102,169 @@ def check_rpmfusion():
     return results
 
 
-def parse_packages(text: str):
-    packages, current, last_key = [], {}, None
-    for line in text.splitlines():
-        if not line.strip() or (line.startswith("Package:") and current):
-            if current:
-                packages.append(current)
-            current, last_key = {}, None
-            if not line.strip():
-                continue
-        if line.startswith((" ", "\t")) and last_key:
-            current[last_key] += "\n" + line.strip()
-            continue
-        key, value = line.split(":", 1)
-        current[key] = value.strip()
-        last_key = key
-    if current:
-        packages.append(current)
-    return packages
+def parse_packages(text):
+    return source_auth.parse_control_records(text)
 
 
 class RequestedVersionNotFound(RuntimeError):
-    """The requested version has no usable record in this official channel."""
+    """The requested version has no authenticated record in this channel."""
 
 
 class AmbiguousVersionError(ValueError):
-    """A short version identifies more than one officially indexed source."""
+    """A short version identifies more than one authenticated source."""
 
 
 def matches_requested_version(version, requested):
-    if version == requested:
-        return True
-    return bool(re.fullmatch(r'[0-9]+(?:[.][0-9]+){3}', requested)
-                and re.fullmatch(re.escape(requested) + r'[.]g[0-9a-fA-F]+', version))
+    parsed = parse_debian_version(version)
+    return requested in (parsed['raw'], parsed['upstream'], parsed['numeric'], parsed['rpm_version'])
 
 
-def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=True, requested_version=None):
+def _normalize(record, evidence, *, channel=None, extra=None):
+    result = dict(record)
+    if extra:
+        result.update(extra)
+    parsed = parse_debian_version(result.get('DebianVersion', result.get('Version', '')))
+    result.update(Version=parsed['raw'], DebianVersion=parsed['raw'], RPMVersion=parsed['rpm_version'],
+                  NumericVersion=parsed['numeric'], CommitHash=parsed['commit'],
+                  UpstreamVersion=parsed['upstream'], DebianEpoch=parsed['epoch'],
+                  DebianRevision=parsed['revision'])
+    info = source_auth.source(evidence['RepositoryID'])
+    distribution = evidence['Distribution']
+    if info['kind'] == 'spotify':
+        expected_channel = 'stable' if distribution == 'stable' else 'unstable'
+        if channel is not None and channel != expected_channel:
+            raise source_auth.AuthenticationError('Spotify signature distribution disagrees with requested channel')
+        channel = expected_channel
+        bases = [s['base_url'] for s in source_auth.registry()['sources']
+                 if s.get('enabled') and (s['kind'] == 'spotify' or s['id'] == 'rug-spotify-bytes')]
+    else:
+        # A distro signature authenticates bytes, never a Spotify release channel.
+        # Channel membership must have been established separately by the history planner.
+        channel = channel or result.get('Channel', 'unknown')
+        bases = [info['base_url']]
+    result.update(RepositoryURL=info['base_url'], Distribution=distribution, Channel=channel,
+                  PackageIndexURL=evidence.get('PackageIndexURL', info['base_url'] + '/dists/' + distribution + '/' + evidence['IndexPath']),
+                  DownloadBaseURLs=bases)
+    source_auth.find_bound_record(source_auth.decode_evidence(evidence)['Packages'], result)
+    return source_auth.bind_record(result, evidence)
+
+
+def fetch_package(branch="stable", package="spotify-client", *, audit_rpmfusion=True,
+                  requested_version=None, accepted_state=None):
     if branch not in CHANNELS:
         raise ValueError("channel must be stable or unstable (testing)")
+    if package != 'spotify-client':
+        raise ValueError('Only the Spotify amd64 client is supported')
     distribution = CHANNELS[branch]
     channel = "stable" if distribution == "stable" else "unstable"
     selected = None
-    for base in REPOSITORIES:
-        url = f"{base}/dists/{distribution}/non-free/binary-amd64/Packages"
+    for info in source_auth.spotify_sources():
         try:
-            with request.urlopen(url, timeout=30) as response:
-                records = parse_packages(response.read().decode("utf-8"))
-            candidates = [r for r in records if r.get("Package") == package and r.get("Architecture") == "amd64"]
+            data, evidence = source_auth.verify_repository(info['id'], distribution, accepted_state=accepted_state)
+            candidates = [r for r in parse_packages(data)
+                          if r.get('Package') == package and r.get('Architecture') == 'amd64']
             if requested_version is not None:
-                candidates = [r for r in candidates if matches_requested_version(r.get('Version', '').split(':', 1)[-1], requested_version)]
-                unique = {(r.get('Version'), r.get('SHA256'), r.get('Filename'), r.get('Size')): r for r in candidates}
-                if len(unique) > 1:
-                    versions = ', '.join(sorted({r['Version'] for r in unique.values()}))
-                    raise AmbiguousVersionError('Requested version matches multiple sources or conflicting metadata in ' + channel + '; use an unambiguous full version and official source record: ' + versions)
-                candidates = list(unique.values())
-            record = next(iter(candidates), None)
-            if record is None or record.get("Architecture") != "amd64":
-                raise ValueError("No matching amd64 package record")
-            version = record["Version"].split(":", 1)[-1]
-            if not re.fullmatch(r"[A-Za-z0-9.+~]+", version):
-                raise ValueError("Unsupported RPM version")
-            if not re.fullmatch(r"[0-9a-f]{64}", record.get("SHA256", "")):
-                raise ValueError("Missing or invalid SHA256")
-            if not re.fullmatch(r"pool/non-free/s/spotify-client/[A-Za-z0-9_.+~-]+[.]deb", record.get("Filename", "")):
-                raise ValueError("Unexpected upstream DEB path")
-            if not record.get("Size", "").isdigit() or int(record["Size"]) <= 0:
-                raise ValueError("Missing or invalid DEB size")
-            record.update(RPMVersion=version, RepositoryURL=base, PackageIndexURL=url,
-                          DownloadBaseURLs=list(DOWNLOAD_BASES), Channel=channel, Distribution=distribution)
-            print(f"Spotify package metadata: {url}", file=sys.stderr)
-            selected = record
+                candidates = [r for r in candidates if matches_requested_version(r.get('Version', ''), requested_version)]
+            unique = {(r.get('Version'), r.get('SHA256'), r.get('Filename'), r.get('Size')): r for r in candidates}
+            if len(unique) > 1:
+                raise AmbiguousVersionError('Authenticated index has multiple matching Spotify versions or conflicting records; use the full Debian version')
+            if not unique:
+                continue
+            selected = _normalize(next(iter(unique.values())), evidence, channel=channel)
+            print('Authenticated Spotify metadata: ' + selected['PackageIndexURL'], file=sys.stderr)
             break
-        except error.HTTPError as exc:
-            print(f"Package index unavailable (HTTP {exc.code}): {url}", file=sys.stderr)
-            exc.close()
-        except AmbiguousVersionError:
-            raise
-        except (error.URLError, TimeoutError, ValueError, UnicodeError, OSError, HTTPException):
-            print(f"Package index unavailable or invalid: {url}", file=sys.stderr)
-    # Always last; a newer LPF bootstrap is useful evidence but not sufficient
-    # authority to reclassify a Spotify testing DEB as stable or invent a hash.
+        except (source_auth.SourceUnavailable, source_auth.MetadataRollback) as exc:
+            # An older mirror is not accepted; a later transport can still carry
+            # the publisher's accepted or newer signed snapshot.
+            print('Signed Spotify metadata unavailable: ' + info['id'] + ': ' + str(exc), file=sys.stderr)
+        # AuthenticationError is intentionally fatal: a bad signature, suite,
+        # hash or key must never downgrade to unsigned discovery or another trust path.
     observations = check_rpmfusion() if audit_rpmfusion else []
     if selected is not None:
-        selected["RPMFusionChecks"] = observations
+        selected['RPMFusionChecks'] = observations
         return selected
     if requested_version is not None:
-        raise RequestedVersionNotFound('Requested Spotify version is not advertised in accessible official ' + channel + ' indexes: ' + requested_version)
-    raise RuntimeError("No official Spotify package index is usable; RPM Fusion candidates cannot establish the DEB channel/checksum; stopping")
+        raise RequestedVersionNotFound('Requested Spotify version is not advertised in accessible authenticated ' + channel + ' indexes: ' + requested_version)
+    raise RuntimeError('No authenticated Spotify package index is usable; RPM Fusion candidates cannot establish the DEB channel/checksum; stopping')
+
+
+def verify_distribution_record(record, *, accepted_state=None):
+    provenance = record.get('DistributionProvenance')
+    if not isinstance(provenance, dict):
+        raise source_auth.AuthenticationError('Distribution provenance is required')
+    info = source_auth.source(provenance.get('SourceID'))
+    if info['kind'] != 'distribution':
+        raise source_auth.AuthenticationError('Historical distribution source is not a registered distro authority')
+    distribution = provenance.get('Distribution')
+    if provenance.get('IndexPath') != info.get('distributions', {}).get(distribution, {}).get('index_path'):
+        raise source_auth.AuthenticationError('Distribution index path is not registered')
+    data, evidence = source_auth.verify_repository(info['id'], distribution, accepted_state=accepted_state)
+    exact = source_auth.find_bound_record(data, record)
+    for key in ('OriginalSHA256', 'SpotifySHA256'):
+        if record.get(key) and record[key] != exact['SHA256']:
+            raise source_auth.AuthenticationError('Distro bytes conflict with independently recorded Spotify SHA256')
+    return _normalize(exact, evidence, channel=record.get('Channel'), extra=record)
+
+
+def _snapshot_url(url, expected):
+    if url == expected:
+        return {urlsplit(expected).hostname}
+    # A replay transport supplies only bytes. The pinned OpenPGP chain remains
+    # authoritative, and each capture must name the exact registered original.
+    match = re.fullmatch(r'https://web[.]archive[.]org/web/[0-9]{14}id_/(https?://.+)', str(url))
+    original = urlsplit(match.group(1)) if match else None
+    canonical = urlsplit(expected)
+    if (original is None or original.scheme not in ('http', 'https')
+            or original.hostname != canonical.hostname or original.path != canonical.path
+            or original.username or original.password or original.query or original.fragment
+            or original.port not in (None, 80 if original.scheme == 'http' else 443)):
+        raise source_auth.AuthenticationError('Historical metadata URL is not an approved exact archive capture')
+    return {'web.archive.org'}
+
+
+def verify_historical_record(record, *, accepted_state=None):
+    if record.get('Authentication') is not None:
+        data, evidence = source_auth.replay_authentication(record, accepted_state=accepted_state)
+        exact = source_auth.find_bound_record(data, record)
+        return _normalize(exact, evidence, channel=record.get('Channel'), extra=record)
+    if record.get('DistributionProvenance'):
+        return verify_distribution_record(record, accepted_state=accepted_state)
+    provenance = record.get('HistoricalProvenance')
+    if not isinstance(provenance, dict):
+        raise source_auth.AuthenticationError('Historical source has no revalidatable signed provenance')
+    info = source_auth.source(provenance.get('SourceID'))
+    distribution = provenance.get('Distribution')
+    index_path = provenance.get('IndexPath')
+    if (info['kind'] != 'spotify' or distribution not in info.get('distributions', {})
+            or index_path != info['distributions'][distribution]['index_path']):
+        raise source_auth.AuthenticationError('Historical Spotify authority/distribution/index is not registered')
+    base = info['base_url'] + '/dists/' + distribution + '/'
+    def fetch(field, path):
+        url = provenance.get(field)
+        hosts = _snapshot_url(url, base + path)
+        return source_auth.read_url(url, hosts=hosts)
+    packages = fetch('PackageIndexURL', index_path)
+    # Some archive captures store a compressed Packages representation without
+    # restoring the original Content-Encoding header. Bound decompression still
+    # has to match the uncompressed Packages checksum in the signed Release.
+    if packages.startswith(b'\x1f\x8b'):
+        with gzip.GzipFile(fileobj=io.BytesIO(packages)) as stream:
+            packages = stream.read(source_auth.METADATA_LIMIT + 1)
+        if len(packages) > source_auth.METADATA_LIMIT:
+            raise source_auth.AuthenticationError('Historical package index exceeds size limit')
+    inline = release = signature = None
+    if provenance.get('InReleaseURL'):
+        inline = fetch('InReleaseURL', 'InRelease')
+    elif provenance.get('ReleaseURL') and provenance.get('ReleaseSignatureURL'):
+        release = fetch('ReleaseURL', 'Release')
+        signature = fetch('ReleaseSignatureURL', 'Release.gpg')
+    else:
+        raise source_auth.AuthenticationError('Historical Packages lacks an actual captured signed Release')
+    data, evidence = source_auth.verify_snapshot(info['id'], distribution, index_path, packages,
+        inrelease=inline, release=release, signature=signature, accepted_state=accepted_state)
+    evidence.update({key: provenance[key] for key in ('PackageIndexURL', 'InReleaseURL', 'ReleaseURL', 'ReleaseSignatureURL') if provenance.get(key)})
+    exact = source_auth.find_bound_record(data, record)
+    return _normalize(exact, evidence, channel=record.get('Channel'), extra=record)
 
 
 def main():

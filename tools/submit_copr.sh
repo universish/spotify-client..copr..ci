@@ -7,7 +7,8 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 : "${COPR_CONFIG:?COPR_CONFIG repository secret is required for automatic submission}"
 : "${SPOT_FLY_LIGHT_VERSION:?Expected bootstrap version is required}"
 : "${SPOT_FLY_LIGHT_RELEASE:?Reserved packaging number is required}"
-[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "spot-fly-light $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" ]]
+name=${SPOT_FLY_LIGHT_NAME:-spot-fly-light}
+[[ $(rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}' "$source_rpm") == "$name $SPOT_FLY_LIGHT_VERSION-$SPOT_FLY_LIGHT_RELEASE" ]]
 mkdir -p "$output"
 work=$(mktemp -d "${TMPDIR:-/tmp}/spot..fly..light-copr.XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT

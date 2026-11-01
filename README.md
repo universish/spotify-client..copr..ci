@@ -8,8 +8,7 @@
 
 The project name is **Spot..Light**, its RPM package is **`spot-fly-light`**,
 and its terminal command is **`spot..fly..light`**. **`spot-fly-light`** is an
-equivalent command alias. RPM package names cannot contain `..`, so the package
-uses hyphens while the primary command keeps the chosen spelling.
+equivalent command alias. The RPM package uses hyphens while the primary command keeps the chosen spelling.
 
 The installed catalog offers stable `1.2.95.453.g0eeebbed` (client revision 9)
 and unstable `1.3.4.258.gc60b10b0946a` (client revision 3). Both original DEBs
@@ -63,11 +62,11 @@ spot..fly..light --setup
 ```
 
 In a graphical session, a Zenity window opens displaying the legal text and a checkbox.
-If you agree, the DEB file is downloaded and verified against the CI-scanned source hash; the local `spot-fly-light-client-local`
+If you agree, the DEB file is downloaded and verified against the CI-scanned source hash; the local `spotify-client-via-spot-fly-light`
 RPM is built. The package manager then opens with system privileges.
 Administrator privileges are used only for the final installation/uninstallation process.
 
-If you decline, the download, build, and execution will stop. If our `spot-fly-light-client-local`
+If you decline, the download, build, and execution will stop. If our `spotify-client-via-spot-fly-light`
 package is already installed, system authorization is requested for its removal.
 If authorization is not granted or the removal fails, it is not assumed to have been automatically deleted;
 this launcher will again refuse to run. Existing LPF/vendor packages are not automatically
@@ -80,7 +79,7 @@ requested again. The confirmation record is user-specific. A user without a grap
 run `spot..fly..light --setup --accept-spotify-terms` explicitly after reviewing the text.
 
 ```sh
-spot..fly..light
+spotify
 spot..fly..light --debug
 spot..fly..light --safe-mode
 spot..fly..light --gpu-mode=native
@@ -88,49 +87,95 @@ spot..fly..light --gpu-mode=native
 
 ## Versions and command help
 
-For a manual Actions build, `spotify_version` accepts either a complete Spotify
-version (`1.2.95.453.g0eeebbed`) or its four numeric parts (`1.2.95.453`). Leave it
-blank for the current channels. `spotify_channel=auto` infers the channel; choose
-`stable` or `unstable` if the version is ambiguous. Only versions advertised with
-complete metadata in an accessible official index can be selected. The resolved
-full version determines the client revision counter; the installer retains its
-own date-based version. The other channel stays available in the same installer.
-This new manual selector remains untested and untriggered at the owner's request.
+For a manual Actions build, `spotify_version` accepts a full Debian/Spotify
+version or its four numeric components. Leave it blank to use both current
+channels. `spotify_channel=auto` requires an unambiguous channel; choose `stable`
+or `unstable` explicitly otherwise. Historical requests use the documented
+[version catalog](docs/spotify-version-history.md); if the historical counterpart
+cannot be proven, supply `opposite_version` explicitly. Such a pair is labelled
+as a manual selection. Each source must pass signed repository authentication
+and the CI malware scan before a helper is published.
 
-The installer has its own date-based version. DNF's package description lists
-both pinned Spotify client versions; it does not label the installer with
-Spotify's stable version. To inspect the repository package or the catalog
-already installed on your computer:
+Current helpers use their Stockholm packaging date, independently of Spotify's
+versions. Historical helpers use separate `spot-fly-light-stS-unstU` package
+names and never replace the current helper or become GitHub Latest.
+
+## Launch Spotify
+
+After completing client setup and installation, start the Spotify GUI with:
+
+```sh
+spotify
+```
+
+The local client package is `spotify-client-via-spot-fly-light`. The `spotify`
+command uses Spot..Light's consent checks and graphics configuration. Running
+`spot..fly..light` without an option also launches the installed client.
+
+## Command help
+
+```sh
+spot-fly-light --help
+spot-fly-light -h
+spot..fly..light --help
+spot..fly..light -h
+```
+
+`--help` and `-h` are equivalent: they explain the available options without
+starting Spotify, downloading a DEB or installing a package. `spot-fly-light`
+and `spot..fly..light` accept the same helper options.
+
+## Available client versions
+
+```sh
+spot..fly..light --client-versions
+spot..fly..light -cl.ver
+```
+
+These equivalent commands show the installed helper's version and the exact
+stable and unstable/testing Spotify versions it can install. They read the
+helper's pinned catalog; they do not download or install a client. The package
+description also lists both client versions:
 
 ```sh
 dnf info spot-fly-light
-spot..fly..light --client-versions
-spot..fly..light -cl.ver
-spot..fly..light --help
-spot..fly..light -h
-spot-fly-light --help
-spot-fly-light -h
 ```
 
-`--client-versions` and `-cl.ver` read the installed installer's catalog. They
-show what this installer can build, without downloading or installing a client.
-Update `spot-fly-light` through DNF to receive a newer catalog.
+## Common commands
 
 | Command | Purpose |
 | --- | --- |
-| `spot..fly..light` | Launch the installed client selection. |
-| `spot..fly..light --setup` | Review terms, build and request installation of the pinned stable client. |
-| `spot..fly..light --setup -unstable` | Perform setup for the pinned testing client. |
-| `-unstable` (with setup/update/install/rebuild) | Select testing for that operation; a standalone launch option does not switch clients. |
-| `spot..fly..light --update` | Build/install the stable client offered by the installed bootstrap. |
-| `spot..fly..light --update -unstable` | Build/install the testing client offered by the installed bootstrap. |
-| `spot..fly..light --debug` | Launch with graphics diagnostics. |
-| `spot..fly..light --safe-mode` | Launch with the software-rendering fallback. |
-| `spot..fly..light --status` | Report approval, build and installation readiness. |
-| `spot..fly..light --client-versions` or `-cl.ver` | List both pinned client versions. |
-| `spot..fly..light --help` or `-h` | Explain command options and usage. |
+| `spotify` | Launch the installed Spotify GUI. |
+| `spot..fly..light` | Launch through the helper, using the installed channel. |
+| `spot..fly..light --setup` | Review the notice, build and request installation of pinned stable. |
+| `spot..fly..light --setup -unstable` | Set up the pinned unstable/testing client. |
+| `spot..fly..light --update` | Build/install the stable client offered by this helper. |
+| `spot..fly..light --update -unstable` | Build/install the unstable/testing client offered by this helper. |
+| `spot..fly..light --debug` | Launch with detailed graphics and client diagnostics. |
+| `spot..fly..light --safe-mode` | Launch using software rendering for graphics troubleshooting. |
+| `spot..fly..light --status` | Show approval, build and installation readiness. |
+| `spot..fly..light --install` | Retry installation of an already built, verified pending RPM. |
+| `spot..fly..light --rebuild` | Build another local RPM of the selected pinned client. |
+| `spot..fly..light --gpu-mode=MODE` | Choose a graphics profile: `auto`, `nvidia`, `mesa`, `software` or `native`. |
+| `spot..fly..light --client-versions` or `spot..fly..light -cl.ver` | List both client versions this helper offers. |
+| `spot-fly-light --help` or `spot-fly-light -h` | Explain options and usage. |
 
-The `spot-fly-light` alias accepts the same options.
+Run setup/update commands as your regular user, without `sudo`. Administrator
+authorization is requested only for the package-manager transaction. `-unstable`
+selects testing for setup, update, install or rebuild; it does not switch the
+client merely by being added to a launch command.
+
+`--update` uses the installed helper's pinned catalog. To obtain a newer catalog,
+update the helper first:
+
+```sh
+sudo dnf upgrade spot-fly-light
+```
+
+Historical archive helpers have their own version-pair commands and fixed
+catalogs. The common `spotify` command belongs to the current local client;
+installing an archive helper does not replace it.
+
 
 ## Local Client Build
 
@@ -292,3 +337,20 @@ directory is read without moving or deleting it. Recognized previous GPU/debug
 settings remain fallback values; current settings take precedence. Consent is
 not migrated. Same-version local packaging counters also consider this
 project's own previous cache and installed local target.
+
+## Font and tray compatibility
+
+Spot..Light gives the client a private Fontconfig configuration/cache while
+preserving system and user font preferences. It does not remove shared font
+caches or disguise a cache format by renaming or symlinking it. The client's
+Fontconfig backend creates its own compatible caches. Debug output identifies
+the private configuration and cache used for the selected source.
+
+The tray remains enabled. The local RPM follows the actual ELF library
+requirements of the verified client. Current Spotify builds still call the old
+Ayatana GTK API, which emits a deprecation warning; this is an upstream
+migration dependency, not a warning this installer claims to have eliminated.
+The new GLib library is not substituted under an incompatible old SONAME.
+
+For an append-only COPR usage section, copy
+[the command addendum](docs/copr-command-addendum.md).

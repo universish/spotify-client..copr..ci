@@ -1,6 +1,9 @@
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -28,6 +31,11 @@ def identity(release=5):
 
 
 class BootstrapArchiveTests(unittest.TestCase):
+    def setUp(self):
+        self.auth = mock.patch.object(builder, 'validate_auth', return_value=None)
+        self.auth.start()
+        self.addCleanup(self.auth.stop)
+
     def test_contains_both_scanned_records_and_only_free_helpers(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -66,10 +74,11 @@ class BootstrapArchiveTests(unittest.TestCase):
                     files = {member.name for member in archive.getmembers() if member.isfile()}
                     self.assertEqual(files, {'bootstrap/' + name for name in ('spot..fly..light.py', 'spot..fly..light-gpu.sh',
                         'eula.txt', 'DISCLAIMER.txt', 'COPYRIGHT', 'MIT-new-contributions.txt', 'source.json',
+                        'release_identity.py', 'fontconfig_runtime.py', 'source_auth.py', 'source-registry.json',
                         'onboarding.py', 'spot-fly-light-onboarding.desktop', 'spot-fly-light-onboarding.service')})
                     records = json.load(archive.extractfile('bootstrap/source.json'))
                     self.assertEqual(set(records), {'stable', 'unstable', 'Bootstrap'})
-                    self.assertEqual(records['Bootstrap'], identity())
+                    self.assertEqual(records['Bootstrap'], dict(identity(), Name='spot-fly-light', Kind='current'))
                     self.assertEqual(records['stable']['PackagingRelease'], 9)
                     self.assertEqual(records['unstable']['PackagingRelease'], 3)
                     self.assertEqual(records['unstable']['ScanAttestation']['PUA'], 'advisory')
@@ -106,6 +115,49 @@ class BootstrapArchiveTests(unittest.TestCase):
                 with mock.patch.object(builder.subprocess, 'run') as run:
                     with self.assertRaises(ValueError): builder.build(metadata, root / 'out', 1)
                 run.assert_not_called()
+
+
+@unittest.skipUnless(all(shutil.which(name) for name in ('rpmbuild', 'rpm', 'rpm2cpio', 'desktop-file-validate')),
+                     'RPM build tools are unavailable')
+class ActualFreeRPMBuildTests(unittest.TestCase):
+    def test_current_and_archive_rpms_pass_the_actual_binary_payload_gate(self):
+        """Exercise distro RPM doc layouts and script normalization, with no DEB."""
+        gate_spec = importlib.util.spec_from_file_location('integration_release_gate', REPO / 'tools/verify_release_payload.py')
+        gate = importlib.util.module_from_spec(gate_spec); gate_spec.loader.exec_module(gate)
+        for kind in ('current', 'archive'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp); output = root / 'out'; top = root / 'rebuild'; top.mkdir()
+                (top / 'tmp').mkdir()
+                records = {'stable': record('stable', '1.2.63.394'),
+                           'unstable': record('unstable', '1.2.86.502'), 'Bootstrap': identity(3)}
+                version, release, name = '26.10.31', '3', 'spot-fly-light'
+                if kind == 'archive':
+                    name = 'spot-fly-light-st1.2.63.394-unst1.2.86.502'; release = '3.2'
+                    records['Bootstrap'].update(Kind='archive', Name=name, Release=release,
+                        PackagedAt='2026-11-01T18:00:00+01:00', OriginalBootstrap=identity(3))
+                metadata = root / 'catalog.json'; metadata.write_text(json.dumps(records))
+                # These are deliberately synthetic source/scan fixtures. This
+                # integration verifies RPM bytes and identity only; the separate
+                # authentication tests must establish cryptographic acceptance.
+                with mock.patch.object(builder, 'validate_auth', return_value=None):
+                    builder.build(metadata, output, release)
+                source = output / f'{name}-{version}-{release}.src.rpm'
+                result = subprocess.run(['rpmbuild', '--rebuild', '--nodeps', '--define', f'_topdir {top}',
+                    '--define', f'_tmppath {top / "tmp"}', '--define', 'dist %{nil}', str(source)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                binary = next((top / 'RPMS').rglob('*.x86_64.rpm'))
+                shutil.copy2(binary, output / binary.name)
+                (output / 'SHA256SUMS').write_text(''.join(hashlib.sha256(path.read_bytes()).hexdigest()
+                    + '  ' + path.name + '\n' for path in sorted(output.glob('*.rpm'))))
+                with mock.patch.object(gate, 'validate_auth', return_value=None):
+                    gate.verify(output, version, release,
+                        'https://github.com/universish/spotify-client..copr..ci/actions/runs/123', name)
+                files = gate.rpm_payload(output / binary.name)
+                self.assertNotIn('usr/bin/spotify', files)
+                self.assertFalse(any(path.endswith('.deb') for path in files))
+                if kind == 'archive':
+                    self.assertFalse(any('onboarding' in path for path in files))
+                    self.assertNotIn('usr/bin/spot..fly..light', files)
 
 
 if __name__ == '__main__': unittest.main()
