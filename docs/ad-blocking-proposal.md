@@ -6,6 +6,8 @@ unimplemented and subject to their documented permission/feasibility gates.
 
 The subsequent fixed-port request and Actions automation plan are recorded in
 [the port-separation feasibility report](advertising-port-feasibility.md).
+The latest read-only [server-IP investigation](spotify-ip-investigation-2026-11-02.md)
+records public DNS/routing observations; detailed runtime observations stay local.
 
 ## Owner decision — 2 November 2026
 

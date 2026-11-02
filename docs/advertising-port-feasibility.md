@@ -4,6 +4,10 @@ Status: requested feature recorded; no selective Spotify port mapping is
 implemented, verified or included in an RPM. This document does not substitute
 a general proxy or status API for the requested advertising-only separation.
 
+The owner subsequently asked to examine server IPs instead. See the
+[read-only IP investigation](spotify-ip-investigation-2026-11-02.md).
+Port remapping remains unimplemented; the IP research is not a proven substitute.
+
 ## Requested outcome
 
 Before local Spotify packaging, provide stable, documented ports for advertising
