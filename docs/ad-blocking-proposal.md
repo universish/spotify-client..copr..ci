@@ -1,7 +1,11 @@
 # Extension API scope and advertising-blocking decision
 
-Status: advertising filtering declined by the owner; no ad-blocking connector or
-extension API has been implemented or enabled.
+Status: built-in advertising filtering declined by the owner. The requested
+external-blocker API and advertising-specific port-separation proposals remain
+unimplemented and subject to their documented permission/feasibility gates.
+
+The subsequent fixed-port request and Actions automation plan are recorded in
+[the port-separation feasibility report](advertising-port-feasibility.md).
 
 ## Owner decision — 2 November 2026
 
