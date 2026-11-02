@@ -24,6 +24,9 @@ The registry pins the Spotify fingerprint
 source-authentication material. Their current validity, signature validity,
 expiration and revocation status are checked by the verifier; a successful
 `gpgv` process alone does not establish the complete policy.
+Revocation checks use the reviewed key material bundled with this checkout.
+Publisher key updates and revocations require refreshing that material; this
+does not claim an independent, continuously refreshed revocation service.
 
 The registered Linux Lite Hematite primary key is
 `CB38D02B85C9274CB13041B57F2B3FFE35099647`; its reviewed signing subkey is
