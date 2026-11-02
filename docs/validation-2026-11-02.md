@@ -55,7 +55,7 @@ the selected historical record exactly. A changed hash cannot borrow that proof;
 two new regression tests cover this path. No authentication requirement was
 relaxed, and that failed attempt published nothing.
 
-## Archive delivery and remaining independent verification
+## Archive delivery and independent verification
 
 The corrected planner passed both Ubuntu validation runs
 [41358539933](https://github.com/universish/spotify-client..copr..ci/actions/runs/41358539933)
@@ -78,12 +78,29 @@ Only two small free helper RPMs and SHA256SUMS are public archive assets.
 | x86_64 RPM | `46e6abba48b95656c808d931c5210452a5f85bbaa726a829a618dc74cb9a3f3c` |
 | SHA256SUMS | `9fe72053c4411324d1ba2554ce53f6d0a7b7571edfd950dc1fda15cc8237cc94` |
 
-An independent post-publication Fedora archive download was not executed:
-automatic approval review became unavailable due to its usage limit. Therefore
-the archive's post-download payload/hash replay and a final copied-database DNF
-check using those actual public archive bytes remain pending. Earlier isolated
-solver fixtures and the CI content gate passed, but are not described as this
-missing independent check.
+The independent post-publication download was initially delayed because
+automatic approval review was unavailable. It subsequently completed: the
+actual COPR source/Fedora archive binary passed the exact payload gate and
+signed metadata replay. The archive has precisely 16 allowlisted files, no
+global `spotify` or current-helper command and no autostart/systemd files.
+The three GitHub assets were independently downloaded, matched their API sizes
+and SHA256 digests, and passed the full source/binary/SHA256SUMS gate. The COPR
+source RPM hash also matches the GitHub SRPM above. The actual Fedora archive
+binary (`1.1.fc44`) has SHA256
+`c5b9e8993533840e02f592869cddd41b251282f5120a6d959124b21ec0627b06`.
+
+A new local repository containing only copies of the two actual published
+Fedora helper RPMs was checked against a read-only backup of the installed RPM
+database. Named and ordinary upgrades selected the current helper only. Explicit
+archive installation proposed one additional archive package with no removal or
+replacement. Archive header/path isolation passed. All three DNF commands used
+an explicit copied `--installroot`, disabled system repositories and plugins,
+used only the local file repository, and stopped at `--assumeno` before any
+transaction. The copied database SHA256 was unchanged:
+`15cd5564b541858131c095acf9c3fa8a16c7f9f7f72addd0facabe9e90d8131f`.
+Host packages and files were not transaction targets. Local evidence is under
+ignored `output/delivered-dnf-verification-2026-11-02/`; these final solver
+checks used real public free RPMs rather than the earlier synthetic fixtures.
 
 A subsequent live read-only scheduled-plan check returned `needed: false`
 before DEB download, scanning or reservation. The delivered current run's summary
