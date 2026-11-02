@@ -41,11 +41,19 @@ client. This is a bounded research result, not a claim that every possible
 Spotify document or implementation has been examined. Older community claims
 about port 4070 are not treated as a current advertising-port specification.
 
-No Spotify desktop traffic capture was collected. In particular, this report
-does not assert that Spotify advertisements and songs always share a hostname,
-IP address or exact connection. The engineering conclusion is narrower: a
-port number alone cannot establish the requested classification or guarantee
-that future music playback will remain unaffected.
+The subsequent local investigation sampled only Spotify-owned remote-peer
+socket metadata in user-reported ordinary playback, advertising and resumed
+playback windows. It did not capture packet contents or request URLs. Peer
+endpoints first seen in the advertising window remained observable after
+ordinary playback resumed. This neither identifies their payloads nor proves
+or disproves an advertising-only service role; connections can remain idle.
+Detailed observations remain local and are not included in this report.
+
+No validated traffic classifier resulted from those observations. In particular,
+this report does not assert that Spotify advertisements and songs always share
+a hostname, IP address or exact connection. The engineering conclusion is
+narrower: a port number alone cannot establish the requested classification or
+guarantee that future music playback will remain unaffected.
 
 ## Local protocol counterexample
 

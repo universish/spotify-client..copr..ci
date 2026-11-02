@@ -92,3 +92,19 @@ playback need independent role evidence before claiming separation.
 Local raw DNS/routing results and process/socket observations are under ignored
 `output/spotify-ip-investigation/`. No IP blocklist, fixed-port mechanism or
 Actions traffic-classification job has been implemented by this investigation.
+
+## Completed local comparison
+
+The three user-reported phases—ordinary playback, advertising and resumed
+ordinary playback—were compared locally. Endpoints first observed in the
+advertising-aligned sample were still observable after playback resumed. An
+established socket does not establish that payload is being transferred, so
+this result neither assigns music delivery to those endpoints nor establishes
+an advertising-only role. The samples are brief and do not identify exact
+advertisement boundaries.
+
+This comparison did not produce a validated advertising-only IP classifier.
+The [port-separation implementation gates](advertising-port-feasibility.md#required-implementation-gates)
+therefore remain unmet. No rule, port assignment or Actions mapping job may be
+represented as validated on the basis of this comparison. Raw peer sets,
+session timestamps and process identifiers remain outside version control.
